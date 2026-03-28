@@ -12,3 +12,5 @@ The `Scotty.sh` format is plain bash with annotation comments. That means your e
 While your tasks run, Scotty shows each one with its name, a step counter, elapsed time, and the command that's currently executing. When everything finishes, you get a summary table so you can see at a glance how long each step took. If you need to interrupt a deploy, you can press `p` to [pause](/docs/scotty/v1/basic-usage/pause-and-resume) after the current task and resume with `Enter`.
 
 There's also a `scotty doctor` command that checks your entire setup: it validates your file, tests SSH connectivity to each server, and verifies that tools like PHP, Composer, and Git are installed on the remote machines.
+
+![scotty doctor](https://github.com/spatie/scotty/blob/main/docs/images/scotty-doctor.jpg?raw=true)
