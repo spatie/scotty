@@ -19,12 +19,16 @@ class TaskDefinition
         $humanized = preg_replace('/([a-z])([A-Z])/', '$1 $2', $this->name);
         $humanized = preg_replace('/([A-Z]+)([A-Z][a-z])/', '$1 $2', $humanized);
         $humanized = str_replace(['-', '_'], ' ', $humanized);
-        $humanized = ucfirst(mb_strtolower($humanized));
 
+        return ucfirst(mb_strtolower($humanized));
+    }
+
+    public function displayNameWithEmoji(): string
+    {
         if ($this->emoji !== null) {
-            return "{$this->emoji} {$humanized}";
+            return "{$this->emoji}  {$this->displayName()}";
         }
 
-        return $humanized;
+        return $this->displayName();
     }
 }

@@ -135,9 +135,10 @@ class RunCommand extends Command
                 $dot = $isRemote ? '<fg=yellow>●</>' : '<fg=blue>●</>';
 
                 $this->clearSpinnerLine();
-                $displayName = $task->displayName();
 
-                $this->output->writeln("  {$dot} <options=bold>{$displayName}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
+                $emojiPrefix = $task->emoji !== null ? "{$task->emoji}  " : '';
+
+                $this->output->writeln("  {$dot} {$emojiPrefix}<options=bold>{$task->displayName()}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
             },
             onTaskOutput: $showSummaryOnly ? null : function (string $type, string $serverName, string $output): void {
                 $this->checkForPauseInput();
@@ -260,24 +261,24 @@ class RunCommand extends Command
                 $this->output->writeln($output);
             }
 
-            $this->timings[] = [$task->displayName(), $servers, '-', '<fg=#4A5568>pretend</>'];
+            $this->timings[] = [$task->displayNameWithEmoji(), $servers, '-', '<fg=#4A5568>pretend</>'];
             $this->newLine();
 
             return;
         }
 
         if ($result->succeeded()) {
-            $this->output->writeln("  <fg=green>✓ {$task->displayName()}</> <fg=#4A5568>{$duration}</>");
+            $this->output->writeln("  <fg=green>✓ {$task->displayNameWithEmoji()}</> <fg=#4A5568>{$duration}</>");
             $this->newLine();
 
-            $this->timings[] = [$task->displayName(), $servers, $duration, '<fg=green>OK</>'];
+            $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=green>OK</>'];
 
             return;
         }
 
         $this->failed = true;
 
-        $this->output->writeln("  <fg=red>✗ {$task->displayName()}</> <fg=#4A5568>{$duration}</>");
+        $this->output->writeln("  <fg=red>✗ {$task->displayNameWithEmoji()}</> <fg=#4A5568>{$duration}</>");
 
         if ($showSummaryOnly) {
             $this->newLine();
@@ -299,7 +300,7 @@ class RunCommand extends Command
 
         $this->newLine();
 
-        $this->timings[] = [$task->displayName(), $servers, $duration, '<fg=red>FAILED</>'];
+        $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=red>FAILED</>'];
     }
 
     /** @param array<string, TaskResult> $results */

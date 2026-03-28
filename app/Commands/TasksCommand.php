@@ -53,7 +53,7 @@ class TasksCommand extends Command
                 $task = $config->getTask($name);
                 $servers = implode(', ', $task->servers);
                 $flags = $task->parallel ? 'parallel' : '';
-                $rows[] = [$task->displayName(), $servers, $flags];
+                $rows[] = [$task->displayNameWithEmoji(), $servers, $flags];
             }
 
             table(['Task', 'Servers', 'Flags'], $rows);

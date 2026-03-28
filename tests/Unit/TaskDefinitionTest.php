@@ -38,14 +38,20 @@ it('handles consecutive uppercase letters', function () {
     expect($task->displayName())->toBe('Deploy only ssh');
 });
 
-it('prepends emoji when set', function () {
+it('displayName does not include emoji', function () {
     $task = new TaskDefinition(name: 'startDeployment', script: '', emoji: '🏃');
 
-    expect($task->displayName())->toBe('🏃 Start deployment');
+    expect($task->displayName())->toBe('Start deployment');
 });
 
-it('shows no emoji when null', function () {
+it('displayNameWithEmoji prepends emoji when set', function () {
+    $task = new TaskDefinition(name: 'startDeployment', script: '', emoji: '🏃');
+
+    expect($task->displayNameWithEmoji())->toBe('🏃  Start deployment');
+});
+
+it('displayNameWithEmoji returns plain name when no emoji', function () {
     $task = new TaskDefinition(name: 'deploy', script: '', emoji: null);
 
-    expect($task->displayName())->toBe('Deploy');
+    expect($task->displayNameWithEmoji())->toBe('Deploy');
 });
