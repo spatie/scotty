@@ -3,7 +3,7 @@ title: Your first deploy script
 weight: 4
 ---
 
-Let's say you have a Laravel application running on a Forge server at `forge@your-server.com`. The app lives at `/home/forge/my-app`. Right now you deploy by SSH'ing in, running `git pull`, some artisan commands, and restarting the queue. Let's automate that with Scotty.
+Let's say you have a Laravel application running on a server at `deployer@your-server.com`. The app lives at `/var/www/my-app`. Right now you deploy by SSH'ing in, running `git pull`, some artisan commands, and restarting the queue. Let's automate that with Scotty.
 
 ## Start with the basics
 
@@ -12,7 +12,7 @@ Create a `Scotty.sh` file in your project root:
 ```bash
 #!/usr/bin/env scotty
 
-# @servers remote=forge@your-server.com
+# @servers remote=deployer@your-server.com
 ```
 
 That's enough to connect. You can already test your SSH connection:
@@ -30,7 +30,7 @@ Add your first task. This is what you'd normally type after SSH'ing in:
 ```bash
 # @task on:remote
 pullCode() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     git pull origin main
 }
 ```
@@ -50,19 +50,19 @@ Think about what else you do after pulling code. Probably install dependencies, 
 ```bash
 # @task on:remote
 runComposer() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 }
 
 # @task on:remote
 runMigrations() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     php artisan migrate --force
 }
 
 # @task on:remote
 clearCaches() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
@@ -71,7 +71,7 @@ clearCaches() {
 
 # @task on:remote
 restartWorkers() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     php artisan horizon:terminate
 }
 ```
@@ -96,10 +96,10 @@ Scotty runs each task in order. If something fails (say `composer install` hits 
 
 ## Clean up the repetition
 
-Every task starts with `cd /home/forge/my-app`. You can use a variable to avoid repeating the path:
+Every task starts with `cd /var/www/my-app`. You can use a variable to avoid repeating the path:
 
 ```bash
-APP_DIR="/home/forge/my-app"
+APP_DIR="/var/www/my-app"
 ```
 
 Put it after the servers and macro lines. Variables are plain bash, available in all tasks:
@@ -153,10 +153,10 @@ Here's everything together:
 ```bash
 #!/usr/bin/env scotty
 
-# @servers remote=forge@your-server.com
+# @servers remote=deployer@your-server.com
 # @macro deploy pullCode runComposer runMigrations clearCaches restartWorkers
 
-APP_DIR="/home/forge/my-app"
+APP_DIR="/var/www/my-app"
 BRANCH="${BRANCH:-main}"
 
 # @task on:remote confirm="Deploy to production?"
