@@ -1,6 +1,6 @@
 ---
-title: Installation
-weight: 2
+title: Installation & setup
+weight: 4
 ---
 
 Install Scotty globally via Composer:
@@ -21,7 +21,12 @@ After installation, the `scotty` command should be available:
 scotty list
 ```
 
-## Requirements
+## Creating your first Scotty file
 
-- PHP 8.4 or higher
-- SSH access to your target servers (with key-based authentication)
+Run `scotty init` to create a new file. You'll be prompted to choose a format (bash or Blade) and a server host:
+
+```bash
+scotty init
+```
+
+You can also create a `Scotty.sh` or `Envoy.blade.php` file manually. See the [Blade format](/docs/scotty/v1/basic-usage/blade-format) or [Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format) pages for details.
