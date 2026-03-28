@@ -268,7 +268,7 @@ class RunCommand extends Command
         }
 
         if ($result->succeeded()) {
-            $this->output->writeln("  <fg=green>✓ {$task->displayNameWithEmoji()}</> <fg=#4A5568>{$duration}</>");
+            $this->output->writeln("  <fg=green>✓ Task done:</> {$task->displayNameWithEmoji()} <fg=#4A5568>{$duration}</>");
             $this->newLine();
 
             $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=green>OK</>'];
@@ -278,7 +278,7 @@ class RunCommand extends Command
 
         $this->failed = true;
 
-        $this->output->writeln("  <fg=red>✗ {$task->displayNameWithEmoji()}</> <fg=#4A5568>{$duration}</>");
+        $this->output->writeln("  <fg=red>✗ Task failed:</> {$task->displayNameWithEmoji()} <fg=#4A5568>{$duration}</>");
 
         if ($showSummaryOnly) {
             $this->newLine();
