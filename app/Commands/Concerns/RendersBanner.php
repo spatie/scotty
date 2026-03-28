@@ -27,7 +27,7 @@ trait RendersBanner
 
         $output->writeln('');
 
-        $tagline = ' ✦ Beam your scripts to remote servers :: spatie.be/docs/scotty ✦ ';
+        $tagline = ' ✦ Run tasks on remote servers :: spatie.be/docs/scotty ✦ ';
         $output->writeln("\e[48;5;{$gradient[0]}m\e[30m\e[1m{$tagline}\e[0m");
 
         $output->writeln('');
