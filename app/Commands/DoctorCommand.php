@@ -25,13 +25,11 @@ class DoctorCommand extends Command
 
     protected const REMOTE_TOOLS_TIMEOUT = 10;
 
-    /** @var array<string> */
-    protected const REMOTE_TOOLS = ['php', 'composer', 'node', 'npm', 'git'];
-
     public function handle(): int
     {
         $this->newLine();
-        $this->output->writeln('  <fg=white;options=bold>Scotty Doctor</>');
+        $this->output->writeln('  <options=bold>Scotty Doctor</>');
+        $this->output->writeln('  <fg=#4A5568>Checking your configuration, servers, and remote tools.</>');
         $this->newLine();
 
         $filePath = $this->checkScottyFileExists();
@@ -55,7 +53,17 @@ class DoctorCommand extends Command
 
         $this->newLine();
 
-        return $this->hasFailures ? 1 : 0;
+        if ($this->hasFailures) {
+            $this->output->writeln('  <fg=red;options=bold>Some checks failed.</> Fix the issues above and run <options=bold>scotty doctor</> again.');
+            $this->newLine();
+
+            return 1;
+        }
+
+        $this->output->writeln('  <fg=green;options=bold>Everything looks good.</> You\'re ready to deploy.');
+        $this->newLine();
+
+        return 0;
     }
 
     protected function checkScottyFileExists(): ?string
@@ -89,9 +97,7 @@ class DoctorCommand extends Command
         $taskCount = count($config->tasks);
         $macroCount = count($config->macros);
 
-        $details = "{$taskCount} tasks, {$macroCount} macros";
-
-        $this->writeSuccess("File parsed successfully ({$details})");
+        $this->writeSuccess("File parsed successfully ({$taskCount} tasks, {$macroCount} macros)");
 
         return $config;
     }
@@ -145,9 +151,7 @@ class DoctorCommand extends Command
         $this->writeSuccess('All macro tasks exist');
     }
 
-    /**
-     * @return array<string>
-     */
+    /** @return array<string> */
     protected function findInvalidMacroReferences(ParseResult $config): array
     {
         $invalid = [];
@@ -171,7 +175,8 @@ class DoctorCommand extends Command
             return;
         }
 
-        $this->output->writeln('  <fg=white;options=bold>Servers</>');
+        $this->output->writeln('  <options=bold>Servers</>');
+        $this->output->writeln('  <fg=#4A5568>Testing SSH connectivity to each remote server.</>');
 
         /** @var array<ServerDefinition> $reachableRemoteServers */
         $reachableRemoteServers = [];
@@ -235,7 +240,8 @@ class DoctorCommand extends Command
 
     protected function checkRemoteTools(ServerDefinition $server): void
     {
-        $this->output->writeln("  <fg=white;options=bold>Remote tools ({$server->name})</>");
+        $this->output->writeln("  <options=bold>Remote tools on {$server->name}</>");
+        $this->output->writeln("  <fg=#4A5568>Checking which tools are available on {$server->host}.</>");
 
         $toolCheckScript = implode('; ', [
             'php -v 2>/dev/null | head -1',
@@ -337,8 +343,7 @@ class DoctorCommand extends Command
     protected function reportToolVersion(string $tool, ?string $version): void
     {
         if ($version === null) {
-            $this->writeFailure("{$tool} not found");
-            $this->hasFailures = true;
+            $this->output->writeln("  <fg=#4A5568>-</> {$tool} not found");
 
             return;
         }

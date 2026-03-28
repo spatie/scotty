@@ -1,13 +1,13 @@
 ---
 title: The Scotty.sh format
-weight: 3
+weight: 2
 ---
 
-Scotty introduces a new bash file format. Every line is real bash, with no template syntax. Your editor highlights it correctly and you get full shell support.
+Scotty introduces a bash file format as an alternative to Blade. Every line is real bash. Your editor highlights it correctly and you get full shell support.
 
 ## Servers
 
-Define your servers at the top of the file:
+Define your servers at the top of the file with a `# @servers` annotation:
 
 ```bash
 # @servers local=127.0.0.1 remote=forge@your-server.com
@@ -21,7 +21,7 @@ Multiple servers:
 
 ## Tasks
 
-A task is a bash function preceded by a `# @task` annotation:
+A task is a bash function preceded by a `# @task` annotation. The `on:` parameter specifies which server to run on:
 
 ```bash
 # @task on:remote
@@ -31,8 +31,6 @@ deploy() {
     php artisan migrate --force
 }
 ```
-
-The `on:` parameter specifies which server to run on.
 
 ### Multiple servers
 
@@ -46,7 +44,7 @@ deploy() {
 }
 ```
 
-By default, the task completes on each server sequentially (finishing on `web-1` before starting on `web-2`).
+By default, the task completes on each server sequentially.
 
 ### Parallel execution
 
@@ -64,7 +62,7 @@ restartWorkers() {
 Require confirmation before running a task:
 
 ```bash
-# @task on:remote confirm="Are you sure you want to deploy?"
+# @task on:remote confirm="Are you sure you want to deploy to production?"
 deploy() {
     cd /home/forge/my-app
     git pull origin main
@@ -95,6 +93,14 @@ NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 
 These are plain bash variables, available in all tasks. Computed values like `$(date)` work naturally.
 
+You can also pass variables from the command line:
+
+```bash
+scotty run deploy --branch=develop
+```
+
+The key is uppercased and dashes become underscores, so `--branch=develop` becomes `$BRANCH`.
+
 ## Helper functions
 
 Functions without a `# @task` annotation are treated as helpers. They are available in all tasks:
@@ -112,9 +118,9 @@ deploy() {
 }
 ```
 
-## Lifecycle hooks
+## Hooks
 
-Run scripts before or after tasks, and on success or failure:
+Run scripts at different points in the execution lifecycle:
 
 ```bash
 # @before
@@ -177,7 +183,7 @@ cloneRepository() {
 runComposer() {
     cd $NEW_RELEASE_DIR
     ln -nfs $BASE_DIR/.env .env
-    composer install --prefer-dist --no-dev -q -o
+    composer install --prefer-dist --no-dev -o
 }
 
 # @task on:remote
@@ -192,3 +198,17 @@ cleanOldReleases() {
     ls -dt $RELEASES_DIR/* | tail -n +4 | xargs rm -rf
 }
 ```
+
+## Migrating from Blade
+
+The main differences between the Blade and bash formats:
+
+| Blade format | Bash format |
+|---|---|
+| `@servers(['remote' => 'forge@1.1.1.1'])` | `# @servers remote=forge@1.1.1.1` |
+| `@task('deploy', ['on' => 'remote'])` | `# @task on:remote` |
+| `@endtask` | `}` (end of function) |
+| `@story('deploy')` ... `@endstory` | `# @macro deploy task1 task2` |
+| `{{ $variable }}` | `$VARIABLE` |
+| `@setup` PHP block | Shell `$(command)` substitution |
+| `@if($condition)` | Bash `if [ condition ]` |

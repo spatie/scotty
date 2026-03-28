@@ -74,10 +74,15 @@ Already using [Laravel Envoy](https://laravel.com/docs/envoy)? Scotty reads `Env
 
 Full documentation is available at [spatie.be/docs/scotty](https://spatie.be/docs/scotty).
 
-- [The Scotty.sh format](docs/scotty-file-format.md) (servers, tasks, macros, hooks, variables)
-- [Running tasks](docs/running-tasks.md) (pretend mode, pause/resume, dynamic options)
-- [Other commands](docs/other-commands.md) (tasks, ssh, init, doctor)
-- [Envoy compatibility](docs/envoy-compatibility.md) (supported features, migration guide)
+**Basic usage**
+- [The Blade format](docs/basic-usage/blade-format.md) (servers, tasks, stories, hooks, variables, setup)
+- [The Scotty.sh format](docs/basic-usage/bash-format.md) (the new bash format, migration guide)
+- [Running tasks](docs/basic-usage/running-tasks.md) (pretend, continue, summary, dynamic options)
+
+**Advanced**
+- [Pause and resume](docs/advanced-usage/pause-and-resume.md)
+- [Doctor](docs/advanced-usage/doctor.md) (validate servers, connectivity, remote tools)
+- [File lookup order](docs/advanced-usage/file-lookup-order.md)
 
 ## Acknowledgements
 

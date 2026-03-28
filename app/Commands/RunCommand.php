@@ -49,14 +49,12 @@ class RunCommand extends Command
 
     protected float $globalStartTime = 0;
 
-    protected bool $statusLineVisible = false;
+    protected bool $spinnerLineVisible = false;
 
     /** @var array<string> */
     protected array $spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
     protected int $spinnerIndex = 0;
-
-    protected int $lastStatusLineSecond = -1;
 
     protected bool $pauseRequested = false;
 
@@ -107,7 +105,7 @@ class RunCommand extends Command
         $this->registerSignalHandlers();
 
         $this->newLine();
-        $this->output->writeln("  <fg=white;options=bold>Starting {$target}</>");
+        $this->output->writeln("  <options=bold>Starting {$target}</>");
         $this->newLine();
 
         $executor = new Executor;
@@ -129,74 +127,90 @@ class RunCommand extends Command
                 $servers = implode(', ', $task->servers);
                 $parallel = $task->parallel ? ' <fg=cyan>parallel</>' : '';
 
-                $this->clearStatusLine();
-                $this->output->writeln("  <fg=blue>●</> <fg=white;options=bold>{$task->name}</> <fg=gray>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
-                $this->writeStatusLine();
+                $this->clearSpinnerLine();
+                $this->output->writeln("  <fg=blue>●</> <options=bold>{$task->name}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
             },
             onTaskOutput: $showSummaryOnly ? null : function (string $type, string $serverName, string $output): void {
                 $this->checkForPauseInput();
-                $this->clearStatusLine();
+                $this->clearSpinnerLine();
                 $this->writeTaskOutput($type, $serverName, $output);
-                $this->writeStatusLine();
+                $this->writeSpinnerLine();
             },
             onTick: function (): void {
                 $this->checkForPauseInput();
-
-                $currentSecond = (int) (microtime(true) - $this->taskStartTime);
-
-                if ($currentSecond === $this->lastStatusLineSecond) {
-                    return;
-                }
-
-                $this->lastStatusLineSecond = $currentSecond;
-                $this->clearStatusLine();
-                $this->writeStatusLine();
+                $this->overwriteSpinnerLine();
             },
             onTaskComplete: function (TaskDefinition $task, TaskResult $result) use ($showSummaryOnly, $pretend): void {
-                $this->clearStatusLine();
+                $this->clearSpinnerLine();
                 $this->writeTaskComplete($task, $result, $showSummaryOnly, $pretend);
             },
         );
 
-        $this->clearStatusLine();
+        $this->clearSpinnerLine();
         $this->disablePauseDetection();
         $this->writeResultSummary($results);
 
         return $this->failed ? 1 : 0;
     }
 
-    protected function writeStatusLine(): void
+    protected function buildSpinnerContent(): string
     {
         $frame = $this->spinnerFrames[$this->spinnerIndex % count($this->spinnerFrames)];
         $this->spinnerIndex++;
 
         $elapsed = $this->formatDuration(microtime(true) - $this->taskStartTime);
 
-        $parts = "  <fg=gray>│</>  <fg=blue>{$frame}</>  <fg=gray>{$elapsed}</>";
+        $line = "  <fg=#4A5568>│</>  <fg=blue>{$frame}</>  <fg=#4A5568>{$elapsed}</>";
 
         if ($this->lastTracedCommand !== '') {
-            $truncatedCommand = $this->truncate($this->lastTracedCommand, 50);
-            $parts .= "  <fg=gray>▸ {$truncatedCommand}</>";
+            $termWidth = (int) (@exec('tput cols') ?: 120);
+            $usedLength = strlen("  |  {$frame}  {$elapsed}  >   p pause  ^C quit");
+            $availableForCommand = $termWidth - $usedLength;
+
+            if ($availableForCommand > 15) {
+                $command = $this->truncate($this->lastTracedCommand, $availableForCommand);
+                $line .= "  <fg=#4A5568>▸ {$command}</>";
+            }
         }
 
         if ($this->pauseRequested) {
-            $parts .= '  <fg=yellow>⏸ pausing after this task</>';
-        } else {
-            $parts .= '  <fg=gray>p pause  ^C quit</>';
+            $line .= '  <fg=yellow>⏸ pausing after this task</>';
         }
 
-        $this->output->writeln($parts);
-        $this->statusLineVisible = true;
+        return $line;
     }
 
-    protected function clearStatusLine(): void
+    protected function writeSpinnerLine(): void
     {
-        if (! $this->statusLineVisible) {
+        $line = $this->buildSpinnerContent();
+        $hintsLine = '  <fg=#4A5568>p pause  ^C quit</>';
+
+        $this->output->write($line . "\n\n" . $hintsLine);
+        $this->spinnerLineVisible = true;
+    }
+
+    protected function overwriteSpinnerLine(): void
+    {
+        if (! $this->spinnerLineVisible) {
+            $this->writeSpinnerLine();
+
             return;
         }
 
-        $this->output->write("\033[1A\033[2K");
-        $this->statusLineVisible = false;
+        $line = $this->buildSpinnerContent();
+        $hintsLine = '  <fg=#4A5568>p pause  ^C quit</>';
+
+        $this->output->write("\r\033[2A\r" . $line . "\n\n" . $hintsLine . "\033[K");
+    }
+
+    protected function clearSpinnerLine(): void
+    {
+        if (! $this->spinnerLineVisible) {
+            return;
+        }
+
+        $this->output->write("\r\033[2K\033[1A\033[2K\033[1A\033[2K");
+        $this->spinnerLineVisible = false;
     }
 
     protected function writeTaskOutput(string $type, string $serverName, string $output): void
@@ -221,13 +235,7 @@ class RunCommand extends Command
 
             $cleanLine = $this->cleanOutputLine($line);
 
-            if ($type === Process::ERR) {
-                $this->output->writeln("  <fg=gray>│</>  <fg={$color}>{$serverName}</>  <fg=red>{$cleanLine}</>");
-
-                continue;
-            }
-
-            $this->output->writeln("  <fg=gray>│</>  <fg={$color}>{$serverName}</>  {$cleanLine}");
+            $this->output->writeln("  <fg=#4A5568>│</>  <fg={$color}>{$serverName}</>  {$cleanLine}");
         }
     }
 
@@ -241,14 +249,14 @@ class RunCommand extends Command
                 $this->output->writeln($output);
             }
 
-            $this->timings[] = [$task->name, $servers, '-', '<fg=gray>pretend</>'];
+            $this->timings[] = [$task->name, $servers, '-', '<fg=#4A5568>pretend</>'];
             $this->newLine();
 
             return;
         }
 
         if ($result->succeeded()) {
-            $this->output->writeln("  <fg=green>✓ {$task->name}</> <fg=gray>{$duration}</>");
+            $this->output->writeln("  <fg=green>✓ {$task->name}</> <fg=#4A5568>{$duration}</>");
             $this->newLine();
 
             $this->timings[] = [$task->name, $servers, $duration, '<fg=green>OK</>'];
@@ -258,7 +266,7 @@ class RunCommand extends Command
 
         $this->failed = true;
 
-        $this->output->writeln("  <fg=red>✗ {$task->name}</> <fg=gray>{$duration}</>");
+        $this->output->writeln("  <fg=red>✗ {$task->name}</> <fg=#4A5568>{$duration}</>");
 
         if ($showSummaryOnly) {
             $this->newLine();
@@ -269,7 +277,7 @@ class RunCommand extends Command
                         continue;
                     }
 
-                    $this->output->writeln("    <fg=gray>{$hostName}</>  {$line}");
+                    $this->output->writeln("    <fg=#4A5568>{$hostName}</>  {$line}");
                 }
             }
         }
@@ -290,30 +298,23 @@ class RunCommand extends Command
             return;
         }
 
-        $this->output->writeln('  <fg=gray>'.str_repeat('─', 50).'</>');
-        $this->newLine();
-
         table(['Task', 'Server', 'Duration', 'Status'], $this->timings);
 
         $totalDuration = $this->formatDuration(
             array_sum(array_map(fn (TaskResult $taskResult) => $taskResult->duration, $results))
         );
 
-        $completedCount = count(array_filter($results, fn (TaskResult $taskResult) => $taskResult->succeeded()));
         $totalCount = count($results);
 
-        $this->newLine();
-
         if (! $this->failed) {
-            $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed</> <fg=gray>in {$totalDuration}</>");
+            $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed in {$totalDuration}</>");
             $this->newLine();
 
             return;
         }
 
         $failedTask = array_key_first(array_filter($results, fn (TaskResult $taskResult) => ! $taskResult->succeeded()));
-        $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</> <fg=gray>({$completedCount}/{$totalCount} completed in {$totalDuration})</>");
-
+        $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</>");
         $this->newLine();
     }
 
@@ -372,7 +373,7 @@ class RunCommand extends Command
         }
 
         pcntl_signal(SIGINT, function (): void {
-            $this->clearStatusLine();
+            $this->clearSpinnerLine();
             $this->disablePauseDetection();
 
             $this->newLine();
@@ -418,8 +419,8 @@ class RunCommand extends Command
         }
 
         $this->pauseRequested = true;
-        $this->clearStatusLine();
-        $this->writeStatusLine();
+        $this->clearSpinnerLine();
+        $this->writeSpinnerLine();
     }
 
     protected function handlePauseBetweenTasks(): void
@@ -430,9 +431,9 @@ class RunCommand extends Command
             return;
         }
 
-        $this->clearStatusLine();
+        $this->clearSpinnerLine();
         $this->newLine();
-        $this->output->writeln('  <fg=yellow;options=bold>⏸  Paused</> <fg=gray>press Enter to continue, ^C to quit</>');
+        $this->output->writeln('  <fg=yellow;options=bold>⏸  Paused</> <fg=#4A5568>press Enter to continue, ^C to quit</>');
 
         while (true) {
             $input = @fread(STDIN, 1);

@@ -44,6 +44,23 @@ it('works with --conf option', function () {
         ->and($output)->toContain('migrate');
 });
 
+it('runs local tasks without formatting errors', function () {
+    $exitCode = Artisan::call('run', [
+        'task' => 'deploy',
+        '--conf' => $this->fixturePath.'/local-only.sh',
+    ]);
+
+    $output = Artisan::output();
+
+    expect($exitCode)->toBe(0)
+        ->and($output)->toContain('hello from scotty')
+        ->and($output)->toContain('finished')
+        ->and($output)->toContain('Starting deploy')
+        ->and($output)->toContain('greet')
+        ->and($output)->toContain('done')
+        ->and($output)->not->toContain('Invalid option specified');
+});
+
 it('shows error when no file found', function () {
     $tempDir = sys_get_temp_dir().'/scotty-run-test-'.uniqid();
     mkdir($tempDir);
