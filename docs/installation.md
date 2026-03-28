@@ -3,19 +3,19 @@ title: Installation & setup
 weight: 4
 ---
 
-Install Scotty globally via Composer:
+You can install Scotty as a global Composer package:
 
 ```bash
 composer global require spatie/scotty
 ```
 
-Make sure the Composer global bin directory is in your `$PATH`. You can find the path by running:
+Make sure Composer's global bin directory is in your `$PATH`. If you're not sure where it is:
 
 ```bash
 composer global config bin-dir --absolute
 ```
 
-After installation, the `scotty` command should be available:
+Once installed, you should be able to run:
 
 ```bash
 scotty list
@@ -23,10 +23,12 @@ scotty list
 
 ## Creating your first Scotty file
 
-Run `scotty init` to create a new file. You'll be prompted to choose a format (bash or Blade) and a server host:
+The quickest way to get started is to run `scotty init` in your project root:
 
 ```bash
 scotty init
 ```
 
-You can also create a `Scotty.sh` or `Envoy.blade.php` file manually. See the [Blade format](/docs/scotty/v1/basic-usage/blade-format) or [Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format) pages for details.
+You'll be asked to choose a format (bash or Blade) and enter your server's SSH connection string. Scotty creates the file for you.
+
+You can also create a `Scotty.sh` file by hand. Check the [Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format) page for details on the syntax.

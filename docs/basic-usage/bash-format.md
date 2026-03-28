@@ -3,52 +3,54 @@ title: The Scotty.sh format
 weight: 3
 ---
 
-Scotty introduces a bash file format as an alternative to Blade. Every line is real bash. Your editor highlights it correctly and you get full shell support.
+The `Scotty.sh` format is plain bash with annotation comments. Every line is real bash, so your editor highlights it correctly and all your existing shell tooling works.
 
 ## Servers
 
-Define your servers at the top of the file with a `# @servers` annotation:
+At the top of your file, define which servers you want to connect to:
 
 ```bash
-# @servers local=127.0.0.1 remote=forge@your-server.com
+# @servers local=127.0.0.1 remote=deployer@your-server.com
 ```
 
-Multiple servers:
+You can define as many as you need:
 
 ```bash
-# @servers local=127.0.0.1 web-1=forge@1.1.1.1 web-2=forge@2.2.2.2
+# @servers local=127.0.0.1 web-1=deployer@1.1.1.1 web-2=deployer@2.2.2.2
 ```
 
 ## Tasks
 
-A task is a bash function preceded by a `# @task` annotation. The `on:` parameter specifies which server to run on:
+A task is just a bash function with a `# @task` annotation above it. The `on:` parameter tells Scotty which server to run it on:
 
 ```bash
 # @task on:remote
 deploy() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     git pull origin main
     php artisan migrate --force
 }
 ```
 
-### Multiple servers
+That's the core concept. Everything else builds on this.
 
-Target multiple servers by separating names with commas:
+### Running on multiple servers
+
+You can target multiple servers by separating their names with commas:
 
 ```bash
 # @task on:web-1,web-2
 deploy() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     git pull origin main
 }
 ```
 
-By default, the task completes on each server sequentially.
+By default, the task runs on each server one after the other.
 
 ### Parallel execution
 
-Add `parallel` to run on all servers simultaneously:
+If you want to run on all servers at the same time, add `parallel`:
 
 ```bash
 # @task on:web-1,web-2 parallel
@@ -57,27 +59,31 @@ restartWorkers() {
 }
 ```
 
+This is handy for things like restarting workers across a cluster, where you don't need to wait for one to finish before starting the next.
+
 ### Confirmation
 
-Require confirmation before running a task:
+For dangerous tasks (like deploying to production), you can require confirmation:
 
 ```bash
 # @task on:remote confirm="Are you sure you want to deploy to production?"
 deploy() {
-    cd /home/forge/my-app
+    cd /var/www/my-app
     git pull origin main
 }
 ```
 
+Scotty will ask before running the task. If you say no, it stops.
+
 ## Macros
 
-A macro runs multiple tasks in sequence. You can define it on a single line:
+A macro groups multiple tasks together so you can run them with a single command:
 
 ```bash
 # @macro deploy pullCode runComposer clearCache restartWorkers
 ```
 
-For longer macros, use the multi-line format:
+If the list gets long, you can use the multi-line format:
 
 ```bash
 # @macro deploy
@@ -90,21 +96,21 @@ For longer macros, use the multi-line format:
 # @endmacro
 ```
 
-Run it with `scotty run deploy`. Each task runs in order. If any task fails, execution stops.
+Run it with `scotty run deploy`. The tasks execute in the order you listed them. If any task fails, execution stops immediately.
 
 ## Variables
 
-Define variables at the top of the file, before any functions:
+You can define variables at the top of your file, right after the server and macro lines:
 
 ```bash
 BRANCH="main"
 REPOSITORY="your/repo"
-BASE_DIR="/home/forge/my-app"
-RELEASES_DIR="$BASE_DIR/releases"
+APP_DIR="/var/www/my-app"
+RELEASES_DIR="$APP_DIR/releases"
 NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 ```
 
-These are plain bash variables, available in all tasks. Computed values like `$(date)` work naturally.
+These are plain bash variables, so computed values like `$(date)` work naturally. All variables are available in all tasks.
 
 You can also pass variables from the command line:
 
@@ -112,11 +118,11 @@ You can also pass variables from the command line:
 scotty run deploy --branch=develop
 ```
 
-The key is uppercased and dashes become underscores, so `--branch=develop` becomes `$BRANCH`.
+The key gets uppercased and dashes become underscores, so `--branch=develop` sets `$BRANCH` to `develop`.
 
 ## Helper functions
 
-Functions without a `# @task` annotation are treated as helpers. They are available in all tasks:
+Any function without a `# @task` annotation is treated as a helper. Helpers are available in all tasks:
 
 ```bash
 log() {
@@ -126,14 +132,14 @@ log() {
 # @task on:remote
 deploy() {
     log "Deploying..."
-    cd /home/forge/my-app
+    cd /var/www/my-app
     git pull origin main
 }
 ```
 
 ## Hooks
 
-Run scripts at different points in the execution lifecycle:
+You can run code at different points during execution. This is useful for things like sending Slack notifications:
 
 ```bash
 # @before
@@ -164,12 +170,16 @@ onFinished() {
 }
 ```
 
+`@before` and `@after` run around each task. `@success` and `@error` run once at the end depending on whether everything passed. `@finished` always runs, regardless of the outcome.
+
 ## Complete example
+
+Here's a full deploy script using all the concepts above:
 
 ```bash
 #!/usr/bin/env scotty
 
-# @servers local=127.0.0.1 remote=forge@your-server.com
+# @servers local=127.0.0.1 remote=deployer@your-server.com
 # @macro deploy
 #   startDeployment
 #   cloneRepository
@@ -180,9 +190,9 @@ onFinished() {
 
 BRANCH="main"
 REPOSITORY="your/repo"
-BASE_DIR="/home/forge/my-app"
-RELEASES_DIR="$BASE_DIR/releases"
-CURRENT_DIR="$BASE_DIR/current"
+APP_DIR="/var/www/my-app"
+RELEASES_DIR="$APP_DIR/releases"
+CURRENT_DIR="$APP_DIR/current"
 NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 NEW_RELEASE_DIR="$RELEASES_DIR/$NEW_RELEASE_NAME"
 
@@ -201,7 +211,7 @@ cloneRepository() {
 # @task on:remote
 runComposer() {
     cd $NEW_RELEASE_DIR
-    ln -nfs $BASE_DIR/.env .env
+    ln -nfs $APP_DIR/.env .env
     composer install --prefer-dist --no-dev -o
 }
 
@@ -222,11 +232,9 @@ cleanOldReleases() {
 
 If you're coming from Laravel Envoy, here's a quick reference. For the full Blade format documentation, see the [Envoy compatibility](/docs/scotty/v1/advanced-usage/envoy-compatibility) page.
 
-The main differences between the Blade and Scotty.sh formats:
-
-| Blade format | Bash format |
+| Blade format | Scotty.sh format |
 |---|---|
-| `@servers(['remote' => 'forge@1.1.1.1'])` | `# @servers remote=forge@1.1.1.1` |
+| `@servers(['remote' => '1.1.1.1'])` | `# @servers remote=1.1.1.1` |
 | `@task('deploy', ['on' => 'remote'])` | `# @task on:remote` |
 | `@endtask` | `}` (end of function) |
 | `@story('deploy')` ... `@endstory` | `# @macro deploy task1 task2` |

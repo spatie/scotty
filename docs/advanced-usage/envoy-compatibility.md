@@ -3,15 +3,15 @@ title: Envoy compatibility
 weight: 4
 ---
 
-Scotty can read existing [Laravel Envoy](https://laravel.com/docs/envoy) files out of the box. If your project has an `Envoy.blade.php`, you can run it with Scotty without changing anything.
+Scotty can read existing [Laravel Envoy](https://laravel.com/docs/envoy) files out of the box. If your project has an `Envoy.blade.php`, you can run it with Scotty without changing anything. Just run `scotty run deploy` (or whatever your task is called) and it works.
 
-This page documents the Blade file format that Envoy uses, so you can understand your existing file before deciding whether to [migrate to the Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format#migrating-from-blade).
+This page documents the Blade file format that Envoy uses, so you can understand your existing file before deciding whether to [migrate to the Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format#migrating-from-envoy).
 
 All tasks should be defined in an `Envoy.blade.php` file at the root of your project.
 
 ## Defining servers
 
-An array of `@servers` is defined at the top of the file. You can reference these servers in your task declarations:
+Define your servers with the `@servers` directive at the top of the file:
 
 ```blade
 @servers(['web' => ['user@192.168.1.1'], 'workers' => ['user@192.168.1.2']])
@@ -21,7 +21,7 @@ The `@servers` declaration should always be placed on a single line.
 
 ## Defining tasks
 
-Tasks are the basic building block. They define the shell commands that should execute on your remote servers:
+Tasks are the basic building block. They contain the shell commands that should execute on your remote servers:
 
 ```blade
 @servers(['web' => ['user@192.168.1.1']])
@@ -33,11 +33,9 @@ Tasks are the basic building block. They define the shell commands that should e
 @endtask
 ```
 
-Within your `@task` declarations, place the shell commands that should execute on your servers when the task is invoked.
-
 ### Local tasks
 
-You can force a script to run on your local computer by specifying the server's IP address as `127.0.0.1`:
+To run a script on your local machine, use `127.0.0.1` as the server address:
 
 ```blade
 @servers(['localhost' => '127.0.0.1'])
@@ -45,7 +43,7 @@ You can force a script to run on your local computer by specifying the server's 
 
 ### Multiple servers
 
-You can run a task across multiple servers. First, add additional servers to your `@servers` declaration. Then list each server in the task's `on` array:
+List multiple servers in the `on` array to run a task on each one:
 
 ```blade
 @servers(['web-1' => '192.168.1.1', 'web-2' => '192.168.1.2'])
@@ -57,11 +55,11 @@ You can run a task across multiple servers. First, add additional servers to you
 @endtask
 ```
 
-By default, tasks execute on each server serially. A task will finish running on the first server before proceeding to the second.
+By default, the task finishes on the first server before starting on the second.
 
 ### Parallel execution
 
-If you would like to run a task across multiple servers in parallel, add the `parallel` option:
+To run on all servers at the same time, add the `parallel` option:
 
 ```blade
 @task('deploy', ['on' => ['web-1', 'web-2'], 'parallel' => true])
@@ -72,7 +70,7 @@ If you would like to run a task across multiple servers in parallel, add the `pa
 
 ### Task confirmation
 
-Add the `confirm` option to prompt for confirmation before running a task:
+Add `confirm` to prompt before running:
 
 ```blade
 @task('deploy', ['on' => 'web', 'confirm' => true])
@@ -83,7 +81,7 @@ Add the `confirm` option to prompt for confirmation before running a task:
 
 ## Setup
 
-Sometimes you need to execute PHP code before running your tasks. Use the `@setup` directive:
+If you need to execute PHP code before your tasks run, use the `@setup` directive:
 
 ```blade
 @setup
@@ -93,7 +91,7 @@ Sometimes you need to execute PHP code before running your tasks. Use the `@setu
 @endsetup
 ```
 
-If you need to require other PHP files, use the `@include` directive at the top of your file:
+To require other PHP files, use `@include` at the top of your file:
 
 ```blade
 @include('vendor/autoload.php')
@@ -101,13 +99,13 @@ If you need to require other PHP files, use the `@include` directive at the top 
 
 ## Variables
 
-You can pass arguments to tasks from the command line:
+You can pass arguments from the command line:
 
 ```bash
 scotty run deploy --branch=master
 ```
 
-Access the options within your tasks using Blade's echo syntax. You can also use `@if` statements and loops:
+Access them in your tasks using Blade's echo syntax:
 
 ```blade
 @task('deploy', ['on' => 'web'])
@@ -123,7 +121,7 @@ Access the options within your tasks using Blade's echo syntax. You can also use
 
 ## Stories (macros)
 
-Stories group a set of tasks under a single name:
+Stories group tasks under a single name:
 
 ```blade
 @servers(['web' => ['user@192.168.1.1']])
@@ -152,11 +150,11 @@ scotty run deploy
 
 ## Hooks
 
-When tasks and stories run, a number of hooks are executed. All hook code is interpreted as PHP and executed locally.
+Hooks run at different points during execution. All hook code is interpreted as PHP and executed locally.
 
 ### @before
 
-Runs before each task. Receives the name of the task that will be executed:
+Runs before each task:
 
 ```blade
 @before
@@ -168,7 +166,7 @@ Runs before each task. Receives the name of the task that will be executed:
 
 ### @after
 
-Runs after each task. Receives the name of the task that was executed:
+Runs after each task:
 
 ```blade
 @after
@@ -180,7 +178,7 @@ Runs after each task. Receives the name of the task that was executed:
 
 ### @error
 
-Runs after any task failure (exit code greater than 0):
+Runs when a task fails (exit code greater than 0):
 
 ```blade
 @error
@@ -202,7 +200,7 @@ Runs if all tasks executed without errors:
 
 ### @finished
 
-Runs after all tasks, regardless of exit status. Receives the exit code:
+Runs after all tasks, regardless of the outcome:
 
 ```blade
 @finished
@@ -214,7 +212,7 @@ Runs after all tasks, regardless of exit status. Receives the exit code:
 
 ## Importing tasks
 
-You can import other Envoy files so their stories and tasks are added to yours:
+You can import other Envoy files:
 
 ```blade
 @import('vendor/package/Envoy.blade.php')
