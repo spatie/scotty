@@ -1,6 +1,6 @@
 ---
 title: The Scotty.sh format
-weight: 2
+weight: 3
 ---
 
 Scotty introduces a bash file format as an alternative to Blade. Every line is real bash. Your editor highlights it correctly and you get full shell support.

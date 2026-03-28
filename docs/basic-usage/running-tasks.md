@@ -1,6 +1,6 @@
 ---
 title: Running tasks
-weight: 3
+weight: 4
 ---
 
 ## Running a task or macro

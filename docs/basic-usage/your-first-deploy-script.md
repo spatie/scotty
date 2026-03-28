@@ -1,6 +1,6 @@
 ---
 title: Your first deploy script
-weight: 4
+weight: 1
 ---
 
 Let's say you have a Laravel application running on a server at `deployer@your-server.com`. The app lives at `/var/www/my-app`. Right now you deploy by SSH'ing in, running `git pull`, some artisan commands, and restarting the queue. Let's automate that with Scotty.
