@@ -116,7 +116,7 @@ class RunCommand extends Command
             env: $dynamicOptions,
             continueOnError: $this->option('continue'),
             pretend: $pretend,
-            onTaskStart: function (TaskDefinition $task, int $index, int $total): void {
+            onTaskStart: function (TaskDefinition $task, int $index, int $total) use ($config): void {
                 $this->handlePauseBetweenTasks();
 
                 $this->currentTaskName = $task->name;
@@ -127,8 +127,13 @@ class RunCommand extends Command
                 $servers = implode(', ', $task->servers);
                 $parallel = $task->parallel ? ' <fg=cyan>parallel</>' : '';
 
+                $isRemote = collect($task->servers)
+                    ->contains(fn (string $name) => $config->getServer($name)?->isLocal() === false);
+
+                $dot = $isRemote ? '<fg=magenta>●</>' : '<fg=blue>●</>';
+
                 $this->clearSpinnerLine();
-                $this->output->writeln("  <fg=blue>●</> <options=bold>{$task->name}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
+                $this->output->writeln("  {$dot} <options=bold>{$task->name}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
             },
             onTaskOutput: $showSummaryOnly ? null : function (string $type, string $serverName, string $output): void {
                 $this->checkForPauseInput();
