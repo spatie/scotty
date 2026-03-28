@@ -136,7 +136,7 @@ class RunCommand extends Command
 
                 $this->clearSpinnerLine();
 
-                $emojiPrefix = $task->emoji !== null ? "{$task->emoji}  " : '';
+                $emojiPrefix = $task->emoji !== null ? "{$task->emoji} " : '';
 
                 $this->output->writeln("  {$dot} {$emojiPrefix}<options=bold>{$task->displayName()}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
             },
