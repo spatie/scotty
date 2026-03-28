@@ -105,6 +105,7 @@ class Executor
             servers: $task->servers,
             parallel: $task->parallel,
             confirm: $task->confirm,
+            emoji: $task->emoji,
         ), $tasks);
     }
 
