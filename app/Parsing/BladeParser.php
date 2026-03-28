@@ -51,6 +51,7 @@ class BladeParser implements ParserInterface
                 servers: $serverNames,
                 parallel: $options['parallel'] ?? false,
                 confirm: $options['confirm'] ?? null,
+                emoji: $options['emoji'] ?? null,
             );
         }
 

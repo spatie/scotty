@@ -66,6 +66,8 @@ class RunCommand extends Command
 
     protected string $lastTracedCommand = '';
 
+    protected ?int $cachedTerminalWidth = null;
+
     public function handle(): int
     {
         $filePath = $this->resolveFilePathOrFail();
@@ -166,15 +168,17 @@ class RunCommand extends Command
         $this->spinnerIndex++;
 
         $elapsed = $this->formatDuration(microtime(true) - $this->taskStartTime);
+        $termWidth = $this->getTerminalWidth();
+
+        $prefix = "  │  {$frame}  {$elapsed}";
+        $suffix = $this->pauseRequested ? '  ⏸ pausing after this task' : '';
 
         $line = "  <fg=#4A5568>│</>  <fg=blue>{$frame}</>  <fg=#4A5568>{$elapsed}</>";
 
         if ($this->lastTracedCommand !== '') {
-            $termWidth = (int) (@exec('tput cols') ?: 120);
-            $usedLength = strlen("  |  {$frame}  {$elapsed}  >   p pause  ^C quit");
-            $availableForCommand = $termWidth - $usedLength;
+            $availableForCommand = $termWidth - mb_strlen($prefix) - mb_strlen($suffix) - 5;
 
-            if ($availableForCommand > 15) {
+            if ($availableForCommand > 10) {
                 $command = $this->truncate($this->lastTracedCommand, $availableForCommand);
                 $line .= "  <fg=#4A5568>▸ {$command}</>";
             }
@@ -462,6 +466,15 @@ class RunCommand extends Command
     protected function isInteractive(): bool
     {
         return stream_isatty(STDIN);
+    }
+
+    protected function getTerminalWidth(): int
+    {
+        if ($this->cachedTerminalWidth === null) {
+            $this->cachedTerminalWidth = (int) (@exec('tput cols') ?: 120);
+        }
+
+        return $this->cachedTerminalWidth;
     }
 
     protected function formatDuration(float $seconds): string
