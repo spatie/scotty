@@ -75,6 +75,7 @@ class BashParser implements ParserInterface
                 servers: $servers,
                 parallel: $isParallel,
                 confirm: $confirmMessage,
+                emoji: $this->parseTaskEmoji($options),
             );
         }
 
@@ -216,6 +217,15 @@ class BashParser implements ParserInterface
     protected function parseTaskConfirm(string $options): ?string
     {
         if (preg_match('/confirm="([^"]+)"/', $options, $match)) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    protected function parseTaskEmoji(string $options): ?string
+    {
+        if (preg_match('/emoji:(\S+)/', $options, $match)) {
             return $match[1];
         }
 

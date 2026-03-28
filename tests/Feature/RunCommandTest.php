@@ -56,8 +56,8 @@ it('runs local tasks without formatting errors', function () {
         ->and($output)->toContain('hello from scotty')
         ->and($output)->toContain('finished')
         ->and($output)->toContain('Running deploy')
-        ->and($output)->toContain('greet')
-        ->and($output)->toContain('done')
+        ->and($output)->toContain('Greet')
+        ->and($output)->toContain('Done')
         ->and($output)->not->toContain('Invalid option specified');
 });
 

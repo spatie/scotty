@@ -234,6 +234,30 @@ BASH);
     @unlink($fixture);
 });
 
+it('parses emoji from task annotation', function () {
+    $fixture = $this->fixturePath.'/emoji.sh';
+    file_put_contents($fixture, <<<'BASH'
+# @servers local=127.0.0.1
+
+# @task on:local emoji:🚀
+deploy() {
+    echo "deploying"
+}
+
+# @task on:local
+noEmoji() {
+    echo "no emoji"
+}
+BASH);
+
+    $result = $this->parser->parse($fixture);
+
+    expect($result->getTask('deploy')->emoji)->toBe('🚀')
+        ->and($result->getTask('noEmoji')->emoji)->toBeNull();
+
+    @unlink($fixture);
+});
+
 it('produces empty parse result for empty file', function () {
     $fixture = $this->fixturePath.'/empty.sh';
     file_put_contents($fixture, '');

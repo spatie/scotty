@@ -11,10 +11,10 @@ it('lists tasks from a bash file', function () {
     $output = Artisan::output();
 
     expect($exitCode)->toBe(0)
-        ->and($output)->toContain('pull')
-        ->and($output)->toContain('migrate')
-        ->and($output)->toContain('clearCache')
-        ->and($output)->toContain('deployStagingParallel');
+        ->and($output)->toContain('Pull')
+        ->and($output)->toContain('Migrate')
+        ->and($output)->toContain('Clear cache')
+        ->and($output)->toContain('Deploy staging parallel');
 });
 
 it('lists macros from a bash file', function () {
