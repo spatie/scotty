@@ -197,7 +197,7 @@ class RunCommand extends Command
         $line = $this->buildSpinnerContent();
         $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write($line . "\n" . $hints . "\n");
+        $this->output->write($line."\n".$hints."\n");
         $this->spinnerLineVisible = true;
     }
 
@@ -212,7 +212,7 @@ class RunCommand extends Command
         $line = $this->buildSpinnerContent();
         $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write("\033[2A\r" . $line . "\033[K\n" . $hints . "\033[K\n");
+        $this->output->write("\033[2A\r".$line."\033[K\n".$hints."\033[K\n");
     }
 
     protected function clearSpinnerLine(): void
