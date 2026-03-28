@@ -19,7 +19,6 @@ Doctor runs through a series of checks:
 6. **SSH connectivity** to each remote server, with connection timing
 7. **Remote tools** checks whether `php`, `composer`, `node`, `npm`, and `git` are available on each reachable server
 
-![scotty doctor](https://github.com/spatie/scotty/blob/main/docs/images/scotty-doctor.png?raw=true)
-<!-- SCREENSHOT NEEDED: `scotty doctor` output with all checks passing -->
+![scotty doctor](https://github.com/spatie/scotty/blob/main/docs/images/scotty-doctor.jpg?raw=true)
 
 Run this after setting up a new server, when debugging connection issues, or before your first deploy to a new environment.

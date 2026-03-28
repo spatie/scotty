@@ -12,13 +12,11 @@ scotty run cloneRepository
 
 Scotty shows each task as it runs, with a step counter, elapsed time, and the command being executed.
 
-![scotty run deploy](https://github.com/spatie/scotty/blob/main/docs/images/scotty-run-deploy.png?raw=true)
-<!-- SCREENSHOT NEEDED: Full `scotty run deploy` output -->
+![scotty run deploy](https://github.com/spatie/scotty/blob/main/docs/images/scotty-run-deploy.jpg?raw=true)
 
 When a task fails, its output is shown and execution stops.
 
-![Task failure](https://github.com/spatie/scotty/blob/main/docs/images/scotty-failure.png?raw=true)
-<!-- SCREENSHOT NEEDED: A failed task -->
+![Task failure](https://github.com/spatie/scotty/blob/main/docs/images/scotty-failure.jpg?raw=true)
 
 ## Pretend mode
 
@@ -66,8 +64,7 @@ See all available tasks and macros:
 scotty tasks
 ```
 
-![scotty tasks](https://github.com/spatie/scotty/blob/main/docs/images/scotty-tasks.png?raw=true)
-<!-- SCREENSHOT NEEDED: `scotty tasks` output -->
+![scotty tasks](https://github.com/spatie/scotty/blob/main/docs/images/scotty-tasks.jpg?raw=true)
 
 ## SSH into a server
 
