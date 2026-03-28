@@ -90,10 +90,12 @@ class RunCommand extends Command
         }
 
         foreach ($tasks as $task) {
-            if ($task->confirm !== null && ! confirm($task->confirm)) {
-                warning('Task cancelled.');
+            if ($task->confirm !== null) {
+                if (! confirm($task->confirm)) {
+                    warning('Task cancelled.');
 
-                return 1;
+                    return 1;
+                }
             }
         }
 
@@ -197,7 +199,7 @@ class RunCommand extends Command
         $line = $this->buildSpinnerContent();
         $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write($line."\n".$hints."\n");
+        $this->output->write("{$line}\n\n{$hints}\n");
         $this->spinnerLineVisible = true;
     }
 
@@ -212,7 +214,7 @@ class RunCommand extends Command
         $line = $this->buildSpinnerContent();
         $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write("\033[2A\r".$line."\033[K\n".$hints."\033[K\n");
+        $this->output->write("\033[3A\r{$line}\033[K\n\n{$hints}\033[K\n");
     }
 
     protected function clearSpinnerLine(): void
@@ -221,7 +223,7 @@ class RunCommand extends Command
             return;
         }
 
-        $this->output->write("\033[1A\033[2K\033[1A\033[2K");
+        $this->output->write("\033[1A\033[2K\033[1A\033[2K\033[1A\033[2K");
         $this->spinnerLineVisible = false;
     }
 
@@ -231,18 +233,24 @@ class RunCommand extends Command
         $color = $this->getServerColor($serverName);
 
         foreach ($lines as $line) {
-            if (trim($line) === '' || $this->isSshWarning($line)) {
+            if (trim($line) === '') {
                 continue;
             }
 
-            if ($type === Process::ERR && str_contains($line, self::TRACE_MARKER)) {
-                $command = $this->extractTraceCommand($line);
-
-                if ($command !== null) {
-                    $this->lastTracedCommand = $command;
-                }
-
+            if ($this->isSshWarning($line)) {
                 continue;
+            }
+
+            if ($type === Process::ERR) {
+                if (str_contains($line, self::TRACE_MARKER)) {
+                    $command = $this->extractTraceCommand($line);
+
+                    if ($command !== null) {
+                        $this->lastTracedCommand = $command;
+                    }
+
+                    continue;
+                }
             }
 
             $cleanLine = $this->cleanOutputLine($line);
@@ -268,7 +276,7 @@ class RunCommand extends Command
         }
 
         if ($result->succeeded()) {
-            $this->output->writeln("  <fg=green>✓ Task done:</> {$task->displayNameWithEmoji()} <fg=#4A5568>{$duration}</>");
+            $this->output->writeln("  <fg=green>✓ Task done:</> {$task->displayName()} <fg=#4A5568>{$duration}</>");
             $this->newLine();
 
             $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=green>OK</>'];
@@ -278,14 +286,22 @@ class RunCommand extends Command
 
         $this->failed = true;
 
-        $this->output->writeln("  <fg=red>✗ Task failed:</> {$task->displayNameWithEmoji()} <fg=#4A5568>{$duration}</>");
+        $this->output->writeln("  <fg=red>✗ Task failed:</> {$task->displayName()} <fg=#4A5568>{$duration}</>");
 
         if ($showSummaryOnly) {
             $this->newLine();
 
             foreach ($result->outputs as $hostName => $output) {
                 foreach (explode("\n", rtrim($output)) as $line) {
-                    if (trim($line) === '' || $this->isSshWarning($line) || str_contains($line, self::TRACE_MARKER)) {
+                    if (trim($line) === '') {
+                        continue;
+                    }
+
+                    if ($this->isSshWarning($line)) {
+                        continue;
+                    }
+
+                    if (str_contains($line, self::TRACE_MARKER)) {
                         continue;
                     }
 
@@ -426,7 +442,7 @@ class RunCommand extends Command
 
         $input = @fread(STDIN, 1);
 
-        if ($input !== 'p' && $input !== 'P') {
+        if (! in_array($input, ['p', 'P'])) {
             return;
         }
 
@@ -502,7 +518,9 @@ class RunCommand extends Command
             return $text;
         }
 
-        return mb_substr($text, 0, $maxLength - 1).'…';
+        $truncated = mb_substr($text, 0, $maxLength - 1);
+
+        return "{$truncated}…";
     }
 
     protected function cleanOutputLine(string $line): string

@@ -66,8 +66,10 @@ class Executor
                 $onTaskComplete($task, $result);
             }
 
-            if (! $result->succeeded() && ! $continueOnError) {
-                break;
+            if (! $result->succeeded()) {
+                if (! $continueOnError) {
+                    break;
+                }
             }
         }
 
@@ -91,7 +93,9 @@ class Executor
         $preamble = $config->variablePreamble;
 
         foreach ($env as $key => $value) {
-            $preamble .= "\n".strtoupper($key).'='.escapeshellarg($value);
+            $upperKey = strtoupper($key);
+            $escapedValue = escapeshellarg($value);
+            $preamble .= "\n{$upperKey}={$escapedValue}";
         }
 
         $debugTrap = "trap 'echo \"ENVOY_TRACE:\$BASH_COMMAND\" >&2' DEBUG";

@@ -129,13 +129,15 @@ class BashParser implements ParserInterface
         $helperFunctions = $this->extractHelperFunctions($content);
 
         foreach ($cliData as $key => $value) {
-            $lines[] = strtoupper($key).'='.escapeshellarg($value);
+            $escapedValue = escapeshellarg($value);
+            $upperKey = strtoupper($key);
+            $lines[] = "{$upperKey}={$escapedValue}";
         }
 
         $preamble = implode("\n", $lines);
 
         if ($helperFunctions !== '') {
-            $preamble .= "\n".$helperFunctions;
+            $preamble .= "\n{$helperFunctions}";
         }
 
         return $preamble;
@@ -178,21 +180,29 @@ class BashParser implements ParserInterface
         while ($position < $length && $depth > 0) {
             $char = $content[$position];
 
-            if ($char === '\\' && ($inSingleQuote || $inDoubleQuote)) {
-                $position += 2;
+            if ($char === '\\') {
+                if ($inSingleQuote || $inDoubleQuote) {
+                    $position += 2;
 
-                continue;
+                    continue;
+                }
             }
 
-            if ($char === "'" && ! $inDoubleQuote) {
-                $inSingleQuote = ! $inSingleQuote;
-            } elseif ($char === '"' && ! $inSingleQuote) {
-                $inDoubleQuote = ! $inDoubleQuote;
-            } elseif (! $inSingleQuote && ! $inDoubleQuote) {
-                if ($char === '{') {
-                    $depth++;
-                } elseif ($char === '}') {
-                    $depth--;
+            if ($char === "'") {
+                if (! $inDoubleQuote) {
+                    $inSingleQuote = ! $inSingleQuote;
+                }
+            } elseif ($char === '"') {
+                if (! $inSingleQuote) {
+                    $inDoubleQuote = ! $inDoubleQuote;
+                }
+            } elseif (! $inSingleQuote) {
+                if (! $inDoubleQuote) {
+                    if ($char === '{') {
+                        $depth++;
+                    } elseif ($char === '}') {
+                        $depth--;
+                    }
                 }
             }
 

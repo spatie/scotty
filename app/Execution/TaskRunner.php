@@ -106,8 +106,8 @@ class TaskRunner
             $hostExitCode = $process->getExitCode() ?? 0;
             $exitCode += $hostExitCode;
 
-            if ($hostExitCode !== 0 && $failedHost === null) {
-                $failedHost = $name;
+            if ($hostExitCode !== 0) {
+                $failedHost ??= $name;
             }
         }
 
@@ -147,8 +147,8 @@ class TaskRunner
             $hostExitCode = $process->getExitCode() ?? 0;
             $exitCode += $hostExitCode;
 
-            if ($hostExitCode !== 0 && $failedHost === null) {
-                $failedHost = $name;
+            if ($hostExitCode !== 0) {
+                $failedHost ??= $name;
             }
         }
 

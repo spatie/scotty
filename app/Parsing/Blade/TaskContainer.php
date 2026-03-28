@@ -85,7 +85,9 @@ class TaskContainer
     {
         foreach ($this->tasks as $name => &$script) {
             $callback = function (array $match): string {
-                return $match[1].$this->tasks[$match[2]];
+                $taskContent = $this->tasks[$match[2]];
+
+                return "{$match[1]}{$taskContent}";
             };
 
             $script = $this->trimSpaces(
@@ -100,7 +102,7 @@ class TaskContainer
         $this->servers = $servers;
     }
 
-    public function getServer(string $server): ?string
+    public function getServer(string $server): string
     {
         if (! array_key_exists($server, $this->servers)) {
             throw new Exception("Server [{$server}] is not defined.");

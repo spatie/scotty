@@ -4,9 +4,7 @@ namespace App\Execution;
 
 class TaskResult
 {
-    /**
-     * @param  array<string, string>  $outputs  Output per host.
-     */
+    /** @param array<string, string> $outputs */
     public function __construct(
         public int $exitCode,
         public array $outputs = [],

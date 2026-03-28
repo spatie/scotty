@@ -27,14 +27,7 @@ class SshConfigFile
                 continue;
             }
 
-            if (preg_match('/^\s*(\S+)\s*=(.*)$/', $line, $match)) {
-                $key = strtolower($match[1]);
-                $value = self::unquote($match[2]);
-            } else {
-                $segments = preg_split('/\s+/', $line, 2);
-                $key = strtolower($segments[0]);
-                $value = self::unquote($segments[1] ?? '');
-            }
+            [$key, $value] = self::parseKeyValue($line);
 
             if ($key === 'host') {
                 $index++;
@@ -56,10 +49,7 @@ class SshConfigFile
         [$user, $hostname] = $this->parseHost($host);
 
         foreach ($this->groups as $group) {
-            $hostMatches = (isset($group['host']) && $group['host'] === $hostname)
-                || (isset($group['hostname']) && $group['hostname'] === $hostname);
-
-            if (! $hostMatches) {
+            if (! $this->groupMatchesHostname($group, $hostname)) {
                 continue;
             }
 
@@ -75,6 +65,24 @@ class SshConfigFile
         return null;
     }
 
+    /** @param array<string, string> $group */
+    protected function groupMatchesHostname(array $group, string $hostname): bool
+    {
+        if (isset($group['host'])) {
+            if ($group['host'] === $hostname) {
+                return true;
+            }
+        }
+
+        if (isset($group['hostname'])) {
+            if ($group['hostname'] === $hostname) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return array{?string, string} */
     protected function parseHost(string $host): array
     {
@@ -85,12 +93,26 @@ class SshConfigFile
         return [null, $host];
     }
 
+    /** @return array{string, string} */
+    private static function parseKeyValue(string $line): array
+    {
+        if (preg_match('/^\s*(\S+)\s*=(.*)$/', $line, $match)) {
+            return [strtolower($match[1]), self::unquote($match[2])];
+        }
+
+        $segments = preg_split('/\s+/', $line, 2);
+
+        return [strtolower($segments[0]), self::unquote($segments[1] ?? '')];
+    }
+
     private static function unquote(string $string): string
     {
         $string = trim($string);
 
-        if (str_starts_with($string, '"') && str_ends_with($string, '"')) {
-            return substr($string, 1, -1);
+        if (str_starts_with($string, '"')) {
+            if (str_ends_with($string, '"')) {
+                return substr($string, 1, -1);
+            }
         }
 
         return $string;

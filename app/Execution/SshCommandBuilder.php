@@ -96,10 +96,12 @@ class SshCommandBuilder
 
     protected function getSshConfigPath(): ?string
     {
+        $systemUser = $this->getSystemUser();
+
         $home = match (true) {
-            PHP_OS_FAMILY === 'Darwin' => getenv('HOME') ?: '/Users/'.$this->getSystemUser(),
-            PHP_OS_FAMILY === 'Windows' => getenv('USERPROFILE') ?: 'C:\\Users\\'.$this->getSystemUser(),
-            default => getenv('HOME') ?: '/home/'.$this->getSystemUser(),
+            PHP_OS_FAMILY === 'Darwin' => getenv('HOME') ?: "/Users/{$systemUser}",
+            PHP_OS_FAMILY === 'Windows' => getenv('USERPROFILE') ?: "C:\\Users\\{$systemUser}",
+            default => getenv('HOME') ?: "/home/{$systemUser}",
         };
 
         $path = "{$home}/.ssh/config";

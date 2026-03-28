@@ -85,15 +85,14 @@ class Compiler
         $pattern = sprintf('/(@)?%s\s*(.+?)\s*%s(\r?\n)?/s', '{{', '}}');
 
         $callback = function (array $matches): string {
-            $whitespace = empty($matches[3]) ? '' : $matches[3].$matches[3];
-
-            $wrapped = sprintf('%s', $this->compileEchoDefaults($matches[2]));
-
             if ($matches[1]) {
                 return substr($matches[0], 1);
             }
 
-            return '<?php echo '.$wrapped.'; ?>'.$whitespace;
+            $whitespace = empty($matches[3]) ? '' : "{$matches[3]}{$matches[3]}";
+            $echoValue = $this->compileEchoDefaults($matches[2]);
+
+            return "<?php echo {$echoValue}; ?>{$whitespace}";
         };
 
         return preg_replace_callback($pattern, $callback, $value);
@@ -272,7 +271,7 @@ class Compiler
         preg_match_all('/\$([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)/', $value, $matches);
 
         foreach (array_unique($matches[0]) as $variable) {
-            $value = "<?php {$variable} = isset({$variable}) ? {$variable} : null; ?>\n".$value;
+            $value = "<?php {$variable} = isset({$variable}) ? {$variable} : null; ?>\n{$value}";
         }
 
         return $value;
@@ -280,16 +279,16 @@ class Compiler
 
     public function createMatcher(string $function): string
     {
-        return '/(?<!\w)(\s*)@'.$function.'(\s*\(.*\))/';
+        return "/(?<!\w)(\s*)@{$function}(\s*\(.*\))/";
     }
 
     public function createOpenMatcher(string $function): string
     {
-        return '/(?<!\w)(\s*)@'.$function.'(\s*\(.*)\)/';
+        return "/(?<!\w)(\s*)@{$function}(\s*\(.*)\)/";
     }
 
     public function createPlainMatcher(string $function): string
     {
-        return '/(?<!\w)(\s*)@'.$function.'(\s*)/';
+        return "/(?<!\w)(\s*)@{$function}(\s*)/";
     }
 }
