@@ -152,5 +152,5 @@ clearCache() {
 ## Next steps
 
 - Learn the full [Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format) with variables, parallel execution, hooks, and more
-- If you have an existing `Envoy.blade.php`, Scotty [reads it out of the box](/docs/scotty/v1/basic-usage/blade-format)
+- Already using Laravel Envoy? See the [Envoy compatibility](/docs/scotty/v1/advanced-usage/envoy-compatibility) page
 - See all the ways to [run tasks](/docs/scotty/v1/basic-usage/running-tasks), including pretend mode and summary mode

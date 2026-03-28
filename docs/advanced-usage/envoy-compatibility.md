@@ -1,11 +1,13 @@
 ---
-title: The Blade format
-weight: 1
+title: Envoy compatibility
+weight: 4
 ---
 
-Scotty supports the same Blade file format as [Laravel Envoy](https://laravel.com/docs/envoy). If you already have an `Envoy.blade.php` file, Scotty reads it out of the box.
+Scotty can read existing [Laravel Envoy](https://laravel.com/docs/envoy) files out of the box. If your project has an `Envoy.blade.php`, you can run it with Scotty without changing anything.
 
-All Envoy tasks should be defined in an `Envoy.blade.php` file at the root of your project.
+This page documents the Blade file format that Envoy uses, so you can understand your existing file before deciding whether to [migrate to the Scotty.sh format](/docs/scotty/v1/basic-usage/bash-format#migrating-from-blade).
+
+All tasks should be defined in an `Envoy.blade.php` file at the root of your project.
 
 ## Defining servers
 

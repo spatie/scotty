@@ -199,9 +199,11 @@ cleanOldReleases() {
 }
 ```
 
-## Migrating from Blade
+## Migrating from Envoy
 
-The main differences between the Blade and bash formats:
+If you're coming from Laravel Envoy, here's a quick reference. For the full Blade format documentation, see the [Envoy compatibility](/docs/scotty/v1/advanced-usage/envoy-compatibility) page.
+
+The main differences between the Blade and Scotty.sh formats:
 
 | Blade format | Bash format |
 |---|---|
