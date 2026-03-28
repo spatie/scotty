@@ -5,9 +5,6 @@ namespace App\Commands;
 use App\Commands\Concerns\ResolvesScottyFile;
 use LaravelZero\Framework\Commands\Command;
 
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\table;
-
 class TasksCommand extends Command
 {
     use ResolvesScottyFile;
@@ -31,32 +28,49 @@ class TasksCommand extends Command
 
         $available = $config->availableTargets();
 
-        if ($available['macros'] !== []) {
-            info('Macros');
+        $this->newLine();
 
-            $rows = [];
+        if ($available['macros'] !== []) {
+            $this->output->writeln('  <options=bold>Macros</>');
+            $this->newLine();
 
             foreach ($available['macros'] as $name) {
                 $macro = $config->getMacro($name);
-                $rows[] = [$name, implode(', ', $macro->tasks)];
-            }
+                $taskList = array_map(function (string $taskName) use ($config) {
+                    $task = $config->getTask($taskName);
 
-            table(['Macro', 'Tasks'], $rows);
+                    if ($task === null) {
+                        return $taskName;
+                    }
+
+                    return $task->displayNameWithEmoji();
+                }, $macro->tasks);
+
+                $this->output->writeln("  <fg=green>{$name}</>");
+
+                foreach ($taskList as $index => $taskDisplay) {
+                    $number = $index + 1;
+                    $this->output->writeln("    <fg=#4A5568>{$number}.</> {$taskDisplay}");
+                }
+
+                $this->newLine();
+            }
         }
 
         if ($available['tasks'] !== []) {
-            info('Tasks');
-
-            $rows = [];
+            $this->output->writeln('  <options=bold>Tasks</>');
+            $this->newLine();
 
             foreach ($available['tasks'] as $name) {
                 $task = $config->getTask($name);
                 $servers = implode(', ', $task->servers);
-                $flags = $task->parallel ? 'parallel' : '';
-                $rows[] = [$task->displayNameWithEmoji(), $servers, $flags];
+                $parallel = $task->parallel ? ' <fg=cyan>parallel</>' : '';
+                $displayName = $task->displayNameWithEmoji();
+
+                $this->output->writeln("  {$displayName}  <fg=#4A5568>on {$servers}</>{$parallel}");
             }
 
-            table(['Task', 'Servers', 'Flags'], $rows);
+            $this->newLine();
         }
 
         return 0;

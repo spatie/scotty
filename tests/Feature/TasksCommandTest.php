@@ -14,7 +14,9 @@ it('lists tasks from a bash file', function () {
         ->and($output)->toContain('Pull')
         ->and($output)->toContain('Migrate')
         ->and($output)->toContain('Clear cache')
-        ->and($output)->toContain('Deploy staging parallel');
+        ->and($output)->toContain('Deploy staging parallel')
+        ->and($output)->toContain('on local')
+        ->and($output)->toContain('on production');
 });
 
 it('lists macros from a bash file', function () {
@@ -23,7 +25,8 @@ it('lists macros from a bash file', function () {
 
     expect($exitCode)->toBe(0)
         ->and($output)->toContain('deploy')
-        ->and($output)->toContain('fullDeploy');
+        ->and($output)->toContain('fullDeploy')
+        ->and($output)->toContain('Macros');
 });
 
 it('shows error when no file found', function () {
