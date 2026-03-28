@@ -187,8 +187,6 @@ class RunCommand extends Command
 
         if ($this->pauseRequested) {
             $line .= '  <fg=yellow>⏸ pausing after this task</>';
-        } else {
-            $line .= '  <fg=#4A5568>p pause  ^C quit</>';
         }
 
         return $line;
@@ -197,8 +195,9 @@ class RunCommand extends Command
     protected function writeSpinnerLine(): void
     {
         $line = $this->buildSpinnerContent();
+        $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write($line);
+        $this->output->write($line . "\n" . $hints . "\n");
         $this->spinnerLineVisible = true;
     }
 
@@ -211,8 +210,9 @@ class RunCommand extends Command
         }
 
         $line = $this->buildSpinnerContent();
+        $hints = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write("\r".$line."\033[K");
+        $this->output->write("\033[2A\r" . $line . "\033[K\n" . $hints . "\033[K\n");
     }
 
     protected function clearSpinnerLine(): void
@@ -221,7 +221,7 @@ class RunCommand extends Command
             return;
         }
 
-        $this->output->write("\r\033[2K");
+        $this->output->write("\033[1A\033[2K\033[1A\033[2K");
         $this->spinnerLineVisible = false;
     }
 

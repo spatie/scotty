@@ -12,9 +12,4 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DescriberContract::class, ScottyDescriber::class);
     }
-
-    public function register(): void
-    {
-        //
-    }
 }

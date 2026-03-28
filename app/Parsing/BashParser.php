@@ -88,7 +88,7 @@ class BashParser implements ParserInterface
         $hooks = [];
 
         foreach (HookType::cases() as $hookType) {
-            $pattern = '/^#\s*@'.$hookType->value.'\s*$\n(\w+)\(\)\s*\{/m';
+            $pattern = "/^#\s*@{$hookType->value}\s*\$\n(\w+)\(\)\s*\{/m";
 
             if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                 foreach ($matches as $match) {
