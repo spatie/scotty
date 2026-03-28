@@ -274,23 +274,3 @@ Or deploy a specific branch:
 ```bash
 scotty run deploy --branch=develop
 ```
-
-## Rolling back
-
-If something goes wrong after switching, you can roll back by pointing the symlink at the previous release:
-
-```bash
-# @task on:remote
-rollback() {
-    PREVIOUS=$(ls -dt $RELEASES_DIR/* | sed -n '2p')
-    if [ -z "$PREVIOUS" ]; then
-        echo "No previous release found"
-        exit 1
-    fi
-    ln -nfs $PREVIOUS $CURRENT_DIR
-    sudo service php8.4-fpm restart
-    echo "Rolled back to $PREVIOUS"
-}
-```
-
-Run it with `scotty run rollback`. Since the old release directories are still on disk with all their dependencies installed, the rollback is instant.
