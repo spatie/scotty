@@ -3,7 +3,7 @@ title: Introduction
 weight: 1
 ---
 
-Scotty is a tool for executing common tasks on your remote servers. You define tasks in a `Scotty.sh` file, and Scotty handles connecting to your servers, running the scripts, and showing you what's happening.
+Scotty is a tool for executing common tasks on your remote servers. You define tasks in a `Scotty.sh` file, and Scotty handles connecting to your servers, running the scripts, and showing you what's happening. Scotty is also fully compatible with [Laravel Envoy](https://laravel.com/docs/envoy), so you can use it as a drop-in replacement.
 
 ## Features
 
