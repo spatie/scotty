@@ -172,7 +172,7 @@ class RunCommand extends Command
         $termWidth = $this->getTerminalWidth();
 
         $prefix = "  │  {$frame}  {$elapsed}";
-        $suffix = $this->pauseRequested ? '  ⏸ pausing after this task' : '';
+        $suffix = $this->pauseRequested ? '  ⏸ pausing after this task' : '  p pause  ^C quit';
 
         $line = "  <fg=#4A5568>│</>  <fg=blue>{$frame}</>  <fg=#4A5568>{$elapsed}</>";
 
@@ -187,6 +187,8 @@ class RunCommand extends Command
 
         if ($this->pauseRequested) {
             $line .= '  <fg=yellow>⏸ pausing after this task</>';
+        } else {
+            $line .= '  <fg=#4A5568>p pause  ^C quit</>';
         }
 
         return $line;
@@ -195,9 +197,8 @@ class RunCommand extends Command
     protected function writeSpinnerLine(): void
     {
         $line = $this->buildSpinnerContent();
-        $hintsLine = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write($line."\n\n".$hintsLine);
+        $this->output->write($line);
         $this->spinnerLineVisible = true;
     }
 
@@ -210,9 +211,8 @@ class RunCommand extends Command
         }
 
         $line = $this->buildSpinnerContent();
-        $hintsLine = '  <fg=#4A5568>p pause  ^C quit</>';
 
-        $this->output->write("\r\033[2A\r".$line."\n\n".$hintsLine."\033[K");
+        $this->output->write("\r".$line."\033[K");
     }
 
     protected function clearSpinnerLine(): void
@@ -221,7 +221,7 @@ class RunCommand extends Command
             return;
         }
 
-        $this->output->write("\r\033[2K\033[1A\033[2K\033[1A\033[2K");
+        $this->output->write("\r\033[2K");
         $this->spinnerLineVisible = false;
     }
 
