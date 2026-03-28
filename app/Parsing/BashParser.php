@@ -17,6 +17,7 @@ class BashParser implements ParserInterface
         );
     }
 
+    /** @return array<string, ServerDefinition> */
     protected function parseServers(string $content): array
     {
         $servers = [];
@@ -32,28 +33,28 @@ class BashParser implements ParserInterface
         return $servers;
     }
 
+    /** @return array<string, MacroDefinition> */
     protected function parseMacros(string $content): array
     {
         $macros = [];
 
-        // Single-line format: # @macro deploy task1 task2 task3
         preg_match_all('/^#\s*@macro\s+(\w+)\s+(.+)$/m', $content, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
             $name = $match[1];
             $tasks = preg_split('/\s+/', trim($match[2]));
+
             $macros[$name] = new MacroDefinition($name, $tasks);
         }
 
         return $macros;
     }
 
+    /** @return array<string, TaskDefinition> */
     protected function parseTasks(string $content): array
     {
         $tasks = [];
 
-        // Match: # @task on:server[,server2] [parallel] [confirm="message"]
-        // Followed by: functionName() {
         $pattern = '/^#\s*@task\s+(.+)$\n(\w+)\(\)\s*\{/m';
 
         preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
@@ -65,28 +66,28 @@ class BashParser implements ParserInterface
 
             $script = $this->extractFunctionBody($content, $bodyStart);
             $servers = $this->parseTaskServers($options);
-            $parallel = str_contains($options, 'parallel');
-            $confirm = $this->parseTaskConfirm($options);
+            $isParallel = str_contains($options, 'parallel');
+            $confirmMessage = $this->parseTaskConfirm($options);
 
             $tasks[$name] = new TaskDefinition(
                 name: $name,
                 script: $this->dedent($script),
                 servers: $servers,
-                parallel: $parallel,
-                confirm: $confirm,
+                parallel: $isParallel,
+                confirm: $confirmMessage,
             );
         }
 
         return $tasks;
     }
 
+    /** @return array<HookDefinition> */
     protected function parseHooks(string $content): array
     {
         $hooks = [];
-        $hookTypes = ['before', 'after', 'success', 'error', 'finished'];
 
-        foreach ($hookTypes as $type) {
-            $pattern = '/^#\s*@' . $type . '\s*$\n(\w+)\(\)\s*\{/m';
+        foreach (HookType::cases() as $hookType) {
+            $pattern = '/^#\s*@'.$hookType->value.'\s*$\n(\w+)\(\)\s*\{/m';
 
             if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                 foreach ($matches as $match) {
@@ -94,7 +95,7 @@ class BashParser implements ParserInterface
                     $script = $this->extractFunctionBody($content, $bodyStart);
 
                     $hooks[] = new HookDefinition(
-                        type: HookType::from($type),
+                        type: $hookType,
                         script: $this->dedent($script),
                     );
                 }
@@ -108,38 +109,32 @@ class BashParser implements ParserInterface
     {
         $lines = [];
 
-        // Extract top-level variable assignments (before any function)
         foreach (explode("\n", $content) as $line) {
             $trimmed = trim($line);
 
-            // Stop at first function definition
             if (preg_match('/^\w+\(\)\s*\{/', $trimmed)) {
                 break;
             }
 
-            // Skip comments, shebang, empty lines, @annotations
             if ($trimmed === '' || str_starts_with($trimmed, '#') || str_starts_with($trimmed, '#!/')) {
                 continue;
             }
 
-            // Capture variable assignments and function definitions (like log())
             if (preg_match('/^[A-Z_][A-Z0-9_]*=/', $trimmed) || preg_match('/^\w+\(\)\s*\{/', $trimmed)) {
                 $lines[] = $line;
             }
         }
 
-        // Also extract helper functions (like log()) that appear before tasks
         $helperFunctions = $this->extractHelperFunctions($content);
 
-        // Add CLI dynamic options as variables
         foreach ($cliData as $key => $value) {
-            $lines[] = strtoupper($key) . '=' . escapeshellarg($value);
+            $lines[] = strtoupper($key).'='.escapeshellarg($value);
         }
 
         $preamble = implode("\n", $lines);
 
-        if ($helperFunctions) {
-            $preamble .= "\n" . $helperFunctions;
+        if ($helperFunctions !== '') {
+            $preamble .= "\n".$helperFunctions;
         }
 
         return $preamble;
@@ -149,23 +144,23 @@ class BashParser implements ParserInterface
     {
         $functions = [];
 
-        // Find functions that are NOT preceded by @task or @hook annotations
         $pattern = '/^(\w+)\(\)\s*\{/m';
         preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
         foreach ($matches as $match) {
-            $name = $match[1][0];
+            $functionName = $match[1][0];
             $offset = $match[0][1];
 
-            // Check if preceded by a @task or @hook annotation
             $preceding = substr($content, max(0, $offset - 200), min(200, $offset));
+
             if (preg_match('/#\s*@(task|before|after|success|error|finished)\b[^\n]*\n\s*$/', $preceding)) {
                 continue;
             }
 
             $bodyStart = $offset + strlen($match[0][0]);
             $body = $this->extractFunctionBody($content, $bodyStart);
-            $functions[] = "{$name}() {\n{$body}\n}";
+
+            $functions[] = "{$functionName}() {\n{$body}\n}";
         }
 
         return implode("\n\n", $functions);
@@ -174,16 +169,17 @@ class BashParser implements ParserInterface
     protected function extractFunctionBody(string $content, int $startOffset): string
     {
         $depth = 1;
-        $i = $startOffset;
+        $position = $startOffset;
         $length = strlen($content);
         $inSingleQuote = false;
         $inDoubleQuote = false;
 
-        while ($i < $length && $depth > 0) {
-            $char = $content[$i];
+        while ($position < $length && $depth > 0) {
+            $char = $content[$position];
 
             if ($char === '\\' && ($inSingleQuote || $inDoubleQuote)) {
-                $i += 2;
+                $position += 2;
+
                 continue;
             }
 
@@ -200,13 +196,14 @@ class BashParser implements ParserInterface
             }
 
             if ($depth > 0) {
-                $i++;
+                $position++;
             }
         }
 
-        return substr($content, $startOffset, $i - $startOffset);
+        return substr($content, $startOffset, $position - $startOffset);
     }
 
+    /** @return array<string> */
     protected function parseTaskServers(string $options): array
     {
         if (preg_match('/on:(\S+)/', $options, $match)) {
@@ -229,12 +226,13 @@ class BashParser implements ParserInterface
     {
         $lines = explode("\n", $text);
 
-        // Find minimum indentation
         $minIndent = PHP_INT_MAX;
+
         foreach ($lines as $line) {
             if (trim($line) === '') {
                 continue;
             }
+
             $indent = strlen($line) - strlen(ltrim($line));
             $minIndent = min($minIndent, $indent);
         }
@@ -243,7 +241,7 @@ class BashParser implements ParserInterface
             return trim($text);
         }
 
-        $dedented = array_map(function ($line) use ($minIndent) {
+        $dedented = array_map(function (string $line) use ($minIndent): string {
             if (trim($line) === '') {
                 return '';
             }

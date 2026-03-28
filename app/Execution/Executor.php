@@ -6,6 +6,7 @@ use App\Parsing\HookType;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
 use Closure;
+use Symfony\Component\Process\Process;
 
 class Executor
 {
@@ -14,7 +15,7 @@ class Executor
     ) {}
 
     /**
-     * @param array<string, string> $env
+     * @param  array<string, string>  $env
      * @return array<string, TaskResult>
      */
     public function run(
@@ -58,11 +59,8 @@ class Executor
             $result = $this->taskRunner->run($task, $config, $env, $onTaskOutput, $onTick);
             $results[$task->name] = $result;
 
-            if ($result->succeeded()) {
-                $this->runHooks($config, HookType::After);
-            } else {
-                $this->runHooks($config, HookType::Error);
-            }
+            $hookType = $result->succeeded() ? HookType::After : HookType::Error;
+            $this->runHooks($config, $hookType);
 
             if ($onTaskComplete !== null) {
                 $onTaskComplete($task, $result);
@@ -73,7 +71,7 @@ class Executor
             }
         }
 
-        $totalExitCode = array_sum(array_map(fn (TaskResult $r) => $r->exitCode, $results));
+        $totalExitCode = array_sum(array_map(fn (TaskResult $taskResult) => $taskResult->exitCode, $results));
 
         if ($totalExitCode === 0) {
             $this->runHooks($config, HookType::Success);
@@ -85,7 +83,7 @@ class Executor
     }
 
     /**
-     * @param array<TaskDefinition> $tasks
+     * @param  array<TaskDefinition>  $tasks
      * @return array<TaskDefinition>
      */
     protected function prependVariables(array $tasks, ParseResult $config, array $env): array
@@ -93,31 +91,26 @@ class Executor
         $preamble = $config->variablePreamble;
 
         foreach ($env as $key => $value) {
-            $preamble .= "\n" . strtoupper($key) . '=' . escapeshellarg($value);
+            $preamble .= "\n".strtoupper($key).'='.escapeshellarg($value);
         }
 
-        // Inject DEBUG trap for command tracing
-        // The trap echoes each command to stderr with a marker prefix.
-        // It filters itself out to avoid recursion noise.
         $debugTrap = "trap 'echo \"ENVOY_TRACE:\$BASH_COMMAND\" >&2' DEBUG";
 
         $preamble = trim($preamble);
-        $preamble = $preamble !== '' ? $preamble . "\n" . $debugTrap : $debugTrap;
+        $preamble = $preamble !== '' ? "{$preamble}\n{$debugTrap}" : $debugTrap;
 
-        return array_map(function (TaskDefinition $task) use ($preamble) {
-            return new TaskDefinition(
-                name: $task->name,
-                script: $preamble . "\n\n" . $task->script,
-                servers: $task->servers,
-                parallel: $task->parallel,
-                confirm: $task->confirm,
-            );
-        }, $tasks);
+        return array_map(fn (TaskDefinition $task) => new TaskDefinition(
+            name: $task->name,
+            script: "{$preamble}\n\n{$task->script}",
+            servers: $task->servers,
+            parallel: $task->parallel,
+            confirm: $task->confirm,
+        ), $tasks);
     }
 
     protected function pretendTask(TaskDefinition $task, ParseResult $config, array $env): TaskResult
     {
-        $commandBuilder = new SshCommandBuilder;
+        $commandBuilder = $this->taskRunner->getCommandBuilder();
         $output = '';
 
         foreach ($task->servers as $serverName) {
@@ -141,7 +134,7 @@ class Executor
     protected function runHooks(ParseResult $config, HookType $type): void
     {
         foreach ($config->getHooks($type) as $hook) {
-            $process = \Symfony\Component\Process\Process::fromShellCommandline($hook->script);
+            $process = Process::fromShellCommandline($hook->script);
             $process->setTimeout(null);
             $process->run();
         }

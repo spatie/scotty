@@ -2,10 +2,9 @@
 
 namespace App\Commands;
 
+use App\Commands\Concerns\ResolvesScottyFile;
 use App\Execution\Executor;
 use App\Execution\TaskResult;
-use App\Parsing\BashParser;
-use App\Parsing\BladeParser;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
 use LaravelZero\Framework\Commands\Command;
@@ -19,6 +18,8 @@ use function Laravel\Prompts\warning;
 
 class RunCommand extends Command
 {
+    use ResolvesScottyFile;
+
     protected $signature = 'run
         {task : The task or macro to run}
         {--continue : Continue on failure}
@@ -55,6 +56,8 @@ class RunCommand extends Command
 
     protected int $spinnerIndex = 0;
 
+    protected int $lastStatusLineSecond = -1;
+
     protected bool $pauseRequested = false;
 
     protected string $currentTaskName = '';
@@ -67,11 +70,9 @@ class RunCommand extends Command
 
     public function handle(): int
     {
-        $filePath = $this->resolveFilePath();
+        $filePath = $this->resolveFilePathOrFail();
 
         if ($filePath === null) {
-            error('No Scotty file found. Run `scotty init` to create one.');
-
             return 1;
         }
 
@@ -96,7 +97,7 @@ class RunCommand extends Command
             }
         }
 
-        $summary = $this->option('summary');
+        $showSummaryOnly = $this->option('summary');
         $pretend = $this->option('pretend');
 
         $this->totalSteps = count($tasks);
@@ -132,7 +133,7 @@ class RunCommand extends Command
                 $this->output->writeln("  <fg=blue>●</> <fg=white;options=bold>{$task->name}</> <fg=gray>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
                 $this->writeStatusLine();
             },
-            onTaskOutput: $summary ? null : function (string $type, string $serverName, string $output): void {
+            onTaskOutput: $showSummaryOnly ? null : function (string $type, string $serverName, string $output): void {
                 $this->checkForPauseInput();
                 $this->clearStatusLine();
                 $this->writeTaskOutput($type, $serverName, $output);
@@ -140,12 +141,20 @@ class RunCommand extends Command
             },
             onTick: function (): void {
                 $this->checkForPauseInput();
+
+                $currentSecond = (int) (microtime(true) - $this->taskStartTime);
+
+                if ($currentSecond === $this->lastStatusLineSecond) {
+                    return;
+                }
+
+                $this->lastStatusLineSecond = $currentSecond;
                 $this->clearStatusLine();
                 $this->writeStatusLine();
             },
-            onTaskComplete: function (TaskDefinition $task, TaskResult $result) use ($summary, $pretend): void {
+            onTaskComplete: function (TaskDefinition $task, TaskResult $result) use ($showSummaryOnly, $pretend): void {
                 $this->clearStatusLine();
-                $this->writeTaskComplete($task, $result, $summary, $pretend);
+                $this->writeTaskComplete($task, $result, $showSummaryOnly, $pretend);
             },
         );
 
@@ -155,8 +164,6 @@ class RunCommand extends Command
 
         return $this->failed ? 1 : 0;
     }
-
-    // --- Status Line (inline, redrawn in place) ---
 
     protected function writeStatusLine(): void
     {
@@ -168,14 +175,14 @@ class RunCommand extends Command
         $parts = "  <fg=gray>│</>  <fg=blue>{$frame}</>  <fg=gray>{$elapsed}</>";
 
         if ($this->lastTracedCommand !== '') {
-            $cmd = $this->truncate($this->lastTracedCommand, 50);
-            $parts .= "  <fg=gray>▸ {$cmd}</>";
+            $truncatedCommand = $this->truncate($this->lastTracedCommand, 50);
+            $parts .= "  <fg=gray>▸ {$truncatedCommand}</>";
         }
 
         if ($this->pauseRequested) {
-            $parts .= "  <fg=yellow>⏸ pausing after this task</>";
+            $parts .= '  <fg=yellow>⏸ pausing after this task</>';
         } else {
-            $parts .= "  <fg=gray>p pause  ^C quit</>";
+            $parts .= '  <fg=gray>p pause  ^C quit</>';
         }
 
         $this->output->writeln($parts);
@@ -184,13 +191,13 @@ class RunCommand extends Command
 
     protected function clearStatusLine(): void
     {
-        if ($this->statusLineVisible) {
-            $this->output->write("\033[1A\033[2K");
-            $this->statusLineVisible = false;
+        if (! $this->statusLineVisible) {
+            return;
         }
-    }
 
-    // --- Output ---
+        $this->output->write("\033[1A\033[2K");
+        $this->statusLineVisible = false;
+    }
 
     protected function writeTaskOutput(string $type, string $serverName, string $output): void
     {
@@ -216,13 +223,15 @@ class RunCommand extends Command
 
             if ($type === Process::ERR) {
                 $this->output->writeln("  <fg=gray>│</>  <fg={$color}>{$serverName}</>  <fg=red>{$cleanLine}</>");
-            } else {
-                $this->output->writeln("  <fg=gray>│</>  <fg={$color}>{$serverName}</>  {$cleanLine}");
+
+                continue;
             }
+
+            $this->output->writeln("  <fg=gray>│</>  <fg={$color}>{$serverName}</>  {$cleanLine}");
         }
     }
 
-    protected function writeTaskComplete(TaskDefinition $task, TaskResult $result, bool $summary, bool $pretend): void
+    protected function writeTaskComplete(TaskDefinition $task, TaskResult $result, bool $showSummaryOnly, bool $pretend): void
     {
         $duration = $this->formatDuration($result->duration);
         $servers = implode(', ', $task->servers);
@@ -243,76 +252,80 @@ class RunCommand extends Command
             $this->newLine();
 
             $this->timings[] = [$task->name, $servers, $duration, '<fg=green>OK</>'];
-        } else {
-            $this->failed = true;
 
-            $this->output->writeln("  <fg=red>✗ {$task->name}</> <fg=gray>{$duration}</>");
+            return;
+        }
 
-            if ($summary) {
-                $this->newLine();
+        $this->failed = true;
 
-                foreach ($result->outputs as $name => $output) {
-                    foreach (explode("\n", rtrim($output)) as $line) {
-                        if (trim($line) === '' || $this->isSshWarning($line) || str_contains($line, self::TRACE_MARKER)) {
-                            continue;
-                        }
+        $this->output->writeln("  <fg=red>✗ {$task->name}</> <fg=gray>{$duration}</>");
 
-                        $this->output->writeln("    <fg=gray>{$name}</>  {$line}");
-                    }
-                }
-            }
-
-            if ($result->failedHost !== null) {
-                $this->output->writeln("  <fg=red>  └ failed on {$result->failedHost}</>");
-            }
-
+        if ($showSummaryOnly) {
             $this->newLine();
 
-            $this->timings[] = [$task->name, $servers, $duration, '<fg=red>FAILED</>'];
+            foreach ($result->outputs as $hostName => $output) {
+                foreach (explode("\n", rtrim($output)) as $line) {
+                    if (trim($line) === '' || $this->isSshWarning($line) || str_contains($line, self::TRACE_MARKER)) {
+                        continue;
+                    }
+
+                    $this->output->writeln("    <fg=gray>{$hostName}</>  {$line}");
+                }
+            }
         }
+
+        if ($result->failedHost !== null) {
+            $this->output->writeln("  <fg=red>  └ failed on {$result->failedHost}</>");
+        }
+
+        $this->newLine();
+
+        $this->timings[] = [$task->name, $servers, $duration, '<fg=red>FAILED</>'];
     }
 
+    /** @param array<string, TaskResult> $results */
     protected function writeResultSummary(array $results): void
     {
         if ($results === []) {
             return;
         }
 
-        $this->output->writeln('  <fg=gray>' . str_repeat('─', 50) . '</>');
+        $this->output->writeln('  <fg=gray>'.str_repeat('─', 50).'</>');
         $this->newLine();
 
         table(['Task', 'Server', 'Duration', 'Status'], $this->timings);
 
         $totalDuration = $this->formatDuration(
-            array_sum(array_map(fn (TaskResult $r) => $r->duration, $results))
+            array_sum(array_map(fn (TaskResult $taskResult) => $taskResult->duration, $results))
         );
 
-        $completedCount = count(array_filter($results, fn (TaskResult $r) => $r->succeeded()));
+        $completedCount = count(array_filter($results, fn (TaskResult $taskResult) => $taskResult->succeeded()));
         $totalCount = count($results);
 
         $this->newLine();
 
-        if ($this->failed) {
-            $failedTask = array_key_first(array_filter($results, fn (TaskResult $r) => ! $r->succeeded()));
-            $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</> <fg=gray>({$completedCount}/{$totalCount} completed in {$totalDuration})</>");
-        } else {
+        if (! $this->failed) {
             $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed</> <fg=gray>in {$totalDuration}</>");
+            $this->newLine();
+
+            return;
         }
+
+        $failedTask = array_key_first(array_filter($results, fn (TaskResult $taskResult) => ! $taskResult->succeeded()));
+        $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</> <fg=gray>({$completedCount}/{$totalCount} completed in {$totalDuration})</>");
 
         $this->newLine();
     }
 
-    // --- Command Tracing ---
-
     protected function extractTraceCommand(string $line): ?string
     {
-        $pos = strpos($line, self::TRACE_MARKER);
+        $position = strpos($line, self::TRACE_MARKER);
 
-        if ($pos === false) {
+        if ($position === false) {
             return null;
         }
 
-        $command = trim(substr($line, $pos + strlen(self::TRACE_MARKER)));
+        $command = trim(substr($line, $position + strlen(self::TRACE_MARKER)));
 
         if ($command === '') {
             return null;
@@ -351,8 +364,6 @@ class RunCommand extends Command
 
         return false;
     }
-
-    // --- Pause / Resume ---
 
     protected function registerSignalHandlers(): void
     {
@@ -402,11 +413,13 @@ class RunCommand extends Command
 
         $input = @fread(STDIN, 1);
 
-        if ($input === 'p' || $input === 'P') {
-            $this->pauseRequested = true;
-            $this->clearStatusLine();
-            $this->writeStatusLine();
+        if ($input !== 'p' && $input !== 'P') {
+            return;
         }
+
+        $this->pauseRequested = true;
+        $this->clearStatusLine();
+        $this->writeStatusLine();
     }
 
     protected function handlePauseBetweenTasks(): void
@@ -443,8 +456,6 @@ class RunCommand extends Command
         return stream_isatty(STDIN);
     }
 
-    // --- Helpers ---
-
     protected function formatDuration(float $seconds): string
     {
         $rounded = (int) round($seconds);
@@ -469,7 +480,7 @@ class RunCommand extends Command
             return $text;
         }
 
-        return mb_substr($text, 0, $maxLength - 1) . '…';
+        return mb_substr($text, 0, $maxLength - 1).'…';
     }
 
     protected function cleanOutputLine(string $line): string
@@ -481,68 +492,31 @@ class RunCommand extends Command
         return preg_replace('/\033\[[0-9;]*m/', '', $line);
     }
 
-    protected function resolveFilePath(): ?string
-    {
-        if ($path = $this->option('path')) {
-            return file_exists($path) ? $path : null;
-        }
-
-        $filename = $this->option('conf');
-
-        if ($filename !== null) {
-            return file_exists($filename) ? $filename : null;
-        }
-
-        if (file_exists('Scotty.sh')) {
-            return 'Scotty.sh';
-        }
-
-        if (file_exists('Envoy.sh')) {
-            return 'Envoy.sh';
-        }
-
-        if (file_exists('Scotty.blade.php')) {
-            return 'Scotty.blade.php';
-        }
-
-        if (file_exists('Envoy.blade.php')) {
-            return 'Envoy.blade.php';
-        }
-
-        return null;
-    }
-
-    protected function resolveParser(string $filePath): \App\Parsing\ParserInterface
-    {
-        if (str_ends_with($filePath, '.sh')) {
-            return new BashParser;
-        }
-
-        return new BladeParser;
-    }
-
+    /** @return array<string, string> */
     protected function gatherDynamicOptions(): array
     {
         $data = [];
 
         $argv = $_SERVER['argv'] ?? [];
 
-        foreach ($argv as $arg) {
-            if (preg_match('/^--([a-zA-Z][\w-]*)=(.+)$/', $arg, $match)) {
-                $key = $match[1];
-
-                if (in_array($key, ['continue', 'pretend', 'path', 'conf', 'summary'])) {
-                    continue;
-                }
-
-                $data[$key] = $match[2];
-
-                $camel = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $key))));
-                $snake = str_replace('-', '_', $key);
-
-                $data[$camel] = $match[2];
-                $data[$snake] = $match[2];
+        foreach ($argv as $argument) {
+            if (! preg_match('/^--([a-zA-Z][\w-]*)=(.+)$/', $argument, $match)) {
+                continue;
             }
+
+            $key = $match[1];
+
+            if (in_array($key, ['continue', 'pretend', 'path', 'conf', 'summary'])) {
+                continue;
+            }
+
+            $data[$key] = $match[2];
+
+            $camelCase = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $key))));
+            $snakeCase = str_replace('-', '_', $key);
+
+            $data[$camelCase] = $match[2];
+            $data[$snakeCase] = $match[2];
         }
 
         return $data;
@@ -551,6 +525,7 @@ class RunCommand extends Command
     protected function showAvailableTargets(ParseResult $config): void
     {
         $target = $this->argument('task');
+
         error("Task or macro \"{$target}\" is not defined.");
 
         $available = $config->availableTargets();

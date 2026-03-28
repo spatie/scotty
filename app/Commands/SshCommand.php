@@ -2,8 +2,7 @@
 
 namespace App\Commands;
 
-use App\Parsing\BashParser;
-use App\Parsing\BladeParser;
+use App\Commands\Concerns\ResolvesScottyFile;
 use LaravelZero\Framework\Commands\Command;
 
 use function Laravel\Prompts\error;
@@ -11,6 +10,8 @@ use function Laravel\Prompts\select;
 
 class SshCommand extends Command
 {
+    use ResolvesScottyFile;
+
     protected $signature = 'ssh
         {name? : The server to connect to}
         {--path= : Path to the Scotty file}
@@ -20,15 +21,13 @@ class SshCommand extends Command
 
     public function handle(): int
     {
-        $filePath = $this->resolveFilePath();
+        $filePath = $this->resolveFilePathOrFail();
 
         if ($filePath === null) {
-            error('No Scotty file found.');
-
             return 1;
         }
 
-        $parser = str_ends_with($filePath, '.sh') ? new BashParser : new BladeParser;
+        $parser = $this->resolveParser($filePath);
         $config = $parser->parse($filePath);
 
         $servers = $config->servers;
@@ -42,14 +41,12 @@ class SshCommand extends Command
         $name = $this->argument('name');
 
         if ($name === null) {
-            if (count($servers) === 1) {
-                $name = array_key_first($servers);
-            } else {
-                $name = select(
+            $name = count($servers) === 1
+                ? array_key_first($servers)
+                : select(
                     label: 'Which server?',
-                    options: array_map(fn ($s) => "{$s->name} ({$s->host})", $servers),
+                    options: array_map(fn ($server) => "{$server->name} ({$server->host})", $servers),
                 );
-            }
         }
 
         $server = $config->getServer($name);
@@ -69,34 +66,5 @@ class SshCommand extends Command
         passthru("ssh {$server->host}");
 
         return 0;
-    }
-
-    protected function resolveFilePath(): ?string
-    {
-        if ($path = $this->option('path')) {
-            return file_exists($path) ? $path : null;
-        }
-
-        if ($filename = $this->option('conf')) {
-            return file_exists($filename) ? $filename : null;
-        }
-
-        if (file_exists('Scotty.sh')) {
-            return 'Scotty.sh';
-        }
-
-        if (file_exists('Envoy.sh')) {
-            return 'Envoy.sh';
-        }
-
-        if (file_exists('Scotty.blade.php')) {
-            return 'Scotty.blade.php';
-        }
-
-        if (file_exists('Envoy.blade.php')) {
-            return 'Envoy.blade.php';
-        }
-
-        return null;
     }
 }

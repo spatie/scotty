@@ -18,7 +18,7 @@ class SshConfigFile
     {
         $groups = [];
         $index = 0;
-        $matchSection = false;
+        $isMatchSection = false;
 
         foreach (explode(PHP_EOL, $string) as $line) {
             $line = trim($line);
@@ -38,12 +38,12 @@ class SshConfigFile
 
             if ($key === 'host') {
                 $index++;
-                $matchSection = false;
+                $isMatchSection = false;
             } elseif ($key === 'match') {
-                $matchSection = true;
+                $isMatchSection = true;
             }
 
-            if (! $matchSection) {
+            if (! $isMatchSection) {
                 $groups[$index][$key] = $value;
             }
         }
@@ -53,22 +53,18 @@ class SshConfigFile
 
     public function findConfiguredHost(string $host): ?string
     {
-        [$user, $host] = $this->parseHost($host);
+        [$user, $hostname] = $this->parseHost($host);
 
         foreach ($this->groups as $group) {
-            $hostMatches = (isset($group['host']) && $group['host'] === $host)
-                || (isset($group['hostname']) && $group['hostname'] === $host);
+            $hostMatches = (isset($group['host']) && $group['host'] === $hostname)
+                || (isset($group['hostname']) && $group['hostname'] === $hostname);
 
             if (! $hostMatches) {
                 continue;
             }
 
             if ($user !== null) {
-                if (! isset($group['user'])) {
-                    continue;
-                }
-
-                if ($group['user'] !== $user) {
+                if (! isset($group['user']) || $group['user'] !== $user) {
                     continue;
                 }
             }

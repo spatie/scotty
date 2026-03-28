@@ -37,9 +37,10 @@ class InitCommand extends Command
             required: true,
         );
 
-        $content = $format === 'bash'
-            ? $this->bashTemplate($host)
-            : $this->bladeTemplate($host);
+        $content = match ($format) {
+            'bash' => $this->bashTemplate($host),
+            default => $this->bladeTemplate($host),
+        };
 
         file_put_contents($filename, $content);
 
@@ -51,38 +52,38 @@ class InitCommand extends Command
     protected function bashTemplate(string $host): string
     {
         return <<<BASH
-#!/usr/bin/env scotty
+        #!/usr/bin/env scotty
 
-# @servers local=127.0.0.1 remote={$host}
-# @macro deploy startDeployment deploy
+        # @servers local=127.0.0.1 remote={$host}
+        # @macro deploy startDeployment deploy
 
-BRANCH="main"
+        BRANCH="main"
 
-# @task on:local
-startDeployment() {
-    git checkout \$BRANCH
-    git pull origin \$BRANCH
-}
+        # @task on:local
+        startDeployment() {
+            git checkout \$BRANCH
+            git pull origin \$BRANCH
+        }
 
-# @task on:remote
-deploy() {
-    cd /home/forge/myapp
-    git pull origin \$BRANCH
-    php artisan migrate --force
-}
-BASH;
+        # @task on:remote
+        deploy() {
+            cd /home/forge/myapp
+            git pull origin \$BRANCH
+            php artisan migrate --force
+        }
+        BASH;
     }
 
     protected function bladeTemplate(string $host): string
     {
         return <<<'BLADE'
-@servers(['local' => '127.0.0.1', 'remote' => '%s'])
+        @servers(['local' => '127.0.0.1', 'remote' => '%s'])
 
-@task('deploy', ['on' => 'remote'])
-    cd /home/forge/myapp
-    git pull origin {{ $branch }}
-    php artisan migrate --force
-@endtask
-BLADE;
+        @task('deploy', ['on' => 'remote'])
+            cd /home/forge/myapp
+            git pull origin {{ $branch }}
+            php artisan migrate --force
+        @endtask
+        BLADE;
     }
 }

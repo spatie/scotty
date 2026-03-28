@@ -4,6 +4,8 @@ namespace App\Parsing;
 
 use App\Parsing\Blade\Compiler;
 use App\Parsing\Blade\TaskContainer;
+use Closure;
+use ReflectionFunction;
 
 class BladeParser implements ParserInterface
 {
@@ -41,7 +43,6 @@ class BladeParser implements ParserInterface
 
         foreach ($container->getTasks() as $name => $script) {
             $options = $container->getTaskOptions($name);
-
             $serverNames = (array) ($options['on'] ?? []);
 
             $tasks[$name] = new TaskDefinition(
@@ -64,7 +65,7 @@ class BladeParser implements ParserInterface
         foreach ($container->getMacros() as $name => $taskNames) {
             $macros[$name] = new MacroDefinition(
                 name: $name,
-                tasks: array_filter($taskNames, fn (string $t) => $t !== ''),
+                tasks: array_filter($taskNames, fn (string $taskName) => $taskName !== ''),
             );
         }
 
@@ -96,13 +97,9 @@ class BladeParser implements ParserInterface
         return $hooks;
     }
 
-    /**
-     * Hooks in Envoy are stored as closures. We capture them as-is since they
-     * need to be invoked directly rather than converted to shell scripts.
-     */
-    protected function extractCallbackBody(\Closure $callback): string
+    protected function extractCallbackBody(Closure $callback): string
     {
-        $reflection = new \ReflectionFunction($callback);
+        $reflection = new ReflectionFunction($callback);
 
         $file = $reflection->getFileName();
         $startLine = $reflection->getStartLine();

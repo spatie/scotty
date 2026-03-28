@@ -49,7 +49,7 @@ class TaskContainer
 
     public function loadServers(string $path, Compiler $compiler): void
     {
-        $this->load($path, $compiler, [], serversOnly: true);
+        $this->load($path, $compiler, [], __serversOnly: true);
     }
 
     public function load(string $__path, Compiler $__compiler, array $__data = [], bool $__serversOnly = false): void
@@ -71,8 +71,10 @@ class TaskContainer
 
     protected function writeCompiledEnvoyFile(Compiler $compiler, string $path, bool $serversOnly): string
     {
+        $envoyPath = sys_get_temp_dir().'/Envoy'.md5_file($path).'.php';
+
         file_put_contents(
-            $envoyPath = sys_get_temp_dir() . '/Envoy' . md5_file($path) . '.php',
+            $envoyPath,
             $compiler->compile(file_get_contents($path), $serversOnly)
         );
 
@@ -82,8 +84,8 @@ class TaskContainer
     protected function replaceSubTasks(): void
     {
         foreach ($this->tasks as $name => &$script) {
-            $callback = function ($m) {
-                return $m[1] . $this->tasks[$m[2]];
+            $callback = function (array $match): string {
+                return $match[1].$this->tasks[$match[2]];
             };
 
             $script = $this->trimSpaces(
@@ -104,7 +106,7 @@ class TaskContainer
             throw new Exception("Server [{$server}] is not defined.");
         }
 
-        return $this->servers[$server] ?? null;
+        return $this->servers[$server];
     }
 
     /** @return array<string, string> */
@@ -144,16 +146,22 @@ class TaskContainer
 
     protected function resolveImportPath(string $file): string|false
     {
-        if (($path = realpath($file)) !== false) {
-            return $path;
+        $realPath = realpath($file);
+
+        if ($realPath !== false) {
+            return $realPath;
         }
 
-        if (($path = realpath($file . '.blade.php')) !== false) {
-            return $path;
+        $bladeRealPath = realpath("{$file}.blade.php");
+
+        if ($bladeRealPath !== false) {
+            return $bladeRealPath;
         }
 
-        if (($path = realpath(getcwd() . '/vendor/' . $file . '/Envoy.blade.php')) !== false) {
-            return $path;
+        $vendorRealPath = realpath(getcwd()."/vendor/{$file}/Envoy.blade.php");
+
+        if ($vendorRealPath !== false) {
+            return $vendorRealPath;
         }
 
         return false;
@@ -195,9 +203,7 @@ class TaskContainer
     }
 
     /**
-     * Get the IP addresses of the servers specified on the options.
-     *
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      * @return array<string>
      */
     public function resolveServers(array $options): array
@@ -246,9 +252,11 @@ class TaskContainer
 
         if (isset($this->tasks[$name])) {
             $this->tasks[$name] = str_replace('@parent', $this->tasks[$name], $contents);
-        } else {
-            $this->tasks[$name] = $contents;
+
+            return;
         }
+
+        $this->tasks[$name] = $contents;
     }
 
     public function before(Closure $callback): void

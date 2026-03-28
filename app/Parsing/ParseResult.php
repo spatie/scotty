@@ -31,24 +31,31 @@ class ParseResult
         return $this->servers[$name] ?? null;
     }
 
+    /** @return array<TaskDefinition> */
     public function resolveTasksForTarget(string $name): array
     {
-        if ($macro = $this->getMacro($name)) {
+        $macro = $this->getMacro($name);
+
+        if ($macro !== null) {
             return array_map(fn (string $taskName) => $this->tasks[$taskName], $macro->tasks);
         }
 
-        if ($task = $this->getTask($name)) {
+        $task = $this->getTask($name);
+
+        if ($task !== null) {
             return [$task];
         }
 
         return [];
     }
 
+    /** @return array<HookDefinition> */
     public function getHooks(HookType $type): array
     {
         return array_filter($this->hooks, fn (HookDefinition $hook) => $hook->type === $type);
     }
 
+    /** @return array{tasks: array<string>, macros: array<string>} */
     public function availableTargets(): array
     {
         return [

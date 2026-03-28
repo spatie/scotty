@@ -1,0 +1,6 @@
+parameters:
+    level: 5
+    paths:
+        - app/
+    excludePaths:
+        - app/Commands/Concerns/ResolvesScottyFile.php

@@ -13,9 +13,12 @@ class TaskRunner
         protected SshCommandBuilder $commandBuilder = new SshCommandBuilder,
     ) {}
 
-    /**
-     * @param array<string, string> $env
-     */
+    public function getCommandBuilder(): SshCommandBuilder
+    {
+        return $this->commandBuilder;
+    }
+
+    /** @param array<string, string> $env */
     public function run(
         TaskDefinition $task,
         ParseResult $config,
@@ -36,22 +39,16 @@ class TaskRunner
 
         $processes = $this->buildProcesses($serverMap, $task->script, $env);
 
-        if ($task->parallel) {
-            $result = $this->runParallel($processes, $onOutput, $onTick);
-        } else {
-            $result = $this->runSequential($processes, $onOutput, $onTick);
-        }
+        $result = $task->parallel
+            ? $this->runParallel($processes, $onOutput, $onTick)
+            : $this->runSequential($processes, $onOutput, $onTick);
 
         $result->duration = microtime(true) - $startTime;
 
         return $result;
     }
 
-    /**
-     * Resolve server names to hosts, returning name => host mapping.
-     *
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function resolveServerMap(TaskDefinition $task, ParseResult $config): array
     {
         $map = [];
@@ -68,9 +65,9 @@ class TaskRunner
     }
 
     /**
-     * @param array<string, string> $serverMap name => host
-     * @param array<string, string> $env
-     * @return array<string, Process> keyed by server name
+     * @param  array<string, string>  $serverMap
+     * @param  array<string, string>  $env
+     * @return array<string, Process>
      */
     protected function buildProcesses(array $serverMap, string $script, array $env): array
     {
@@ -83,11 +80,7 @@ class TaskRunner
         return $processes;
     }
 
-    /**
-     * Run processes sequentially using non-blocking polling (allows tick callbacks).
-     *
-     * @param array<string, Process> $processes keyed by server name
-     */
+    /** @param array<string, Process> $processes */
     protected function runSequential(array $processes, ?Closure $onOutput, ?Closure $onTick): TaskResult
     {
         $outputs = [];
@@ -108,7 +101,6 @@ class TaskRunner
                 usleep(80_000);
             }
 
-            // Final gather
             $this->gatherOutput([$name => $process], $outputs, $onOutput);
 
             $hostExitCode = $process->getExitCode() ?? 0;
@@ -126,11 +118,7 @@ class TaskRunner
         );
     }
 
-    /**
-     * Run processes in parallel across all hosts.
-     *
-     * @param array<string, Process> $processes keyed by server name
-     */
+    /** @param array<string, Process> $processes */
     protected function runParallel(array $processes, ?Closure $onOutput, ?Closure $onTick): TaskResult
     {
         $outputs = [];
@@ -184,8 +172,8 @@ class TaskRunner
     }
 
     /**
-     * @param array<string, Process> $processes keyed by server name
-     * @param array<string, string> $outputs
+     * @param  array<string, Process>  $processes
+     * @param  array<string, string>  $outputs
      */
     protected function gatherOutput(array $processes, array &$outputs, ?Closure $onOutput): void
     {
