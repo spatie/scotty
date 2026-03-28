@@ -107,6 +107,7 @@ class RunCommand extends Command
 
         $this->enablePauseDetection();
         $this->registerSignalHandlers();
+        $this->output->write("\033[?25l");
 
         $this->newLine();
         $this->output->writeln("  <options=bold>Running {$target}</>");
@@ -159,6 +160,7 @@ class RunCommand extends Command
         );
 
         $this->clearSpinnerLine();
+        $this->output->write("\033[?25h");
         $this->disablePauseDetection();
         $this->writeResultSummary($results);
 
@@ -402,6 +404,7 @@ class RunCommand extends Command
 
         pcntl_signal(SIGINT, function (): void {
             $this->clearSpinnerLine();
+            $this->output->write("\033[?25h");
             $this->disablePauseDetection();
 
             $this->newLine();
