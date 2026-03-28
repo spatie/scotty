@@ -30,6 +30,72 @@ it('parses macros from @macro annotation', function () {
         ->and($result->macros['fullDeploy']->tasks)->toBe(['pull', 'migrate', 'clearCache']);
 });
 
+it('parses multi-line macros', function () {
+    $fixture = $this->fixturePath.'/multiline-macro.sh';
+    file_put_contents($fixture, <<<'BASH'
+# @servers local=127.0.0.1
+
+# @macro deploy
+#   pullCode
+#   runComposer
+#   clearCaches
+# @endmacro
+
+# @task on:local
+pullCode() {
+    echo "pulling"
+}
+
+# @task on:local
+runComposer() {
+    echo "composing"
+}
+
+# @task on:local
+clearCaches() {
+    echo "clearing"
+}
+BASH);
+
+    $result = $this->parser->parse($fixture);
+
+    expect($result->macros)->toHaveCount(1)
+        ->and($result->macros['deploy']->tasks)->toBe(['pullCode', 'runComposer', 'clearCaches']);
+
+    @unlink($fixture);
+});
+
+it('supports both single-line and multi-line macros together', function () {
+    $fixture = $this->fixturePath.'/mixed-macros.sh';
+    file_put_contents($fixture, <<<'BASH'
+# @servers local=127.0.0.1
+# @macro quick taskA taskB
+
+# @macro full
+#   taskA
+#   taskB
+#   taskC
+# @endmacro
+
+# @task on:local
+taskA() { echo "a"; }
+
+# @task on:local
+taskB() { echo "b"; }
+
+# @task on:local
+taskC() { echo "c"; }
+BASH);
+
+    $result = $this->parser->parse($fixture);
+
+    expect($result->macros)->toHaveCount(2)
+        ->and($result->macros['quick']->tasks)->toBe(['taskA', 'taskB'])
+        ->and($result->macros['full']->tasks)->toBe(['taskA', 'taskB', 'taskC']);
+
+    @unlink($fixture);
+});
+
 it('parses tasks with on:server directive', function () {
     $result = $this->parser->parse($this->fixturePath.'/complete.sh');
 

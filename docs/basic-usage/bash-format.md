@@ -71,10 +71,23 @@ deploy() {
 
 ## Macros
 
-A macro runs multiple tasks in sequence:
+A macro runs multiple tasks in sequence. You can define it on a single line:
 
 ```bash
 # @macro deploy pullCode runComposer clearCache restartWorkers
+```
+
+For longer macros, use the multi-line format:
+
+```bash
+# @macro deploy
+#   pullCode
+#   runComposer
+#   generateAssets
+#   updateSymlinks
+#   clearCache
+#   restartWorkers
+# @endmacro
 ```
 
 Run it with `scotty run deploy`. Each task runs in order. If any task fails, execution stops.
@@ -157,7 +170,13 @@ onFinished() {
 #!/usr/bin/env scotty
 
 # @servers local=127.0.0.1 remote=forge@your-server.com
-# @macro deploy startDeployment cloneRepository runComposer blessNewRelease cleanOldReleases
+# @macro deploy
+#   startDeployment
+#   cloneRepository
+#   runComposer
+#   blessNewRelease
+#   cleanOldReleases
+# @endmacro
 
 BRANCH="main"
 REPOSITORY="your/repo"

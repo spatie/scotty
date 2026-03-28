@@ -38,7 +38,16 @@ class BashParser implements ParserInterface
     {
         $macros = [];
 
-        preg_match_all('/^#\s*@macro\s+(\w+)\s+(.+)$/m', $content, $matches, PREG_SET_ORDER);
+        $this->parseSingleLineMacros($content, $macros);
+        $this->parseMultiLineMacros($content, $macros);
+
+        return $macros;
+    }
+
+    /** @param array<string, MacroDefinition> $macros */
+    protected function parseSingleLineMacros(string $content, array &$macros): void
+    {
+        preg_match_all('/^#\s*@macro\s+(\w[\w-]*)\s+(.+)$/m', $content, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
             $name = $match[1];
@@ -46,8 +55,27 @@ class BashParser implements ParserInterface
 
             $macros[$name] = new MacroDefinition($name, $tasks);
         }
+    }
 
-        return $macros;
+    /** @param array<string, MacroDefinition> $macros */
+    protected function parseMultiLineMacros(string $content, array &$macros): void
+    {
+        $pattern = '/^#\s*@macro\s+(\w[\w-]*)\s*$\n((?:#\s+\w[\w-]*\s*\n)+)#\s*@endmacro/m';
+
+        preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $name = $match[1];
+            $taskLines = explode("\n", trim($match[2]));
+
+            $tasks = array_map(function (string $line): string {
+                return trim(ltrim(trim($line), '#'));
+            }, $taskLines);
+
+            $tasks = array_filter($tasks, fn (string $task) => $task !== '');
+
+            $macros[$name] = new MacroDefinition($name, array_values($tasks));
+        }
     }
 
     /** @return array<string, TaskDefinition> */
