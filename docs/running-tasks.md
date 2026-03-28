@@ -12,24 +12,13 @@ scotty run cloneRepository
 
 Scotty shows each task as it runs, with a spinner, elapsed time, and the command being executed:
 
-```
-  Starting deploy
-
-  ● startDeployment [1/5] on local
-  │  local  Already up to date.
-  ✓ startDeployment 2s
-
-  ● cloneRepository [2/5] on remote
-  │  remote  Cloning into '20260328-120000'...
-  ✓ cloneRepository 4s
-```
+![scotty run deploy](https://github.com/spatie/scotty/blob/main/docs/images/scotty-run-deploy.png?raw=true)
+<!-- SCREENSHOT NEEDED: Full `scotty run deploy` output showing a real deploy with multiple tasks completing successfully -->
 
 When a task fails, its output is shown and execution stops:
 
-```
-  ✗ runComposer 3s
-    └ failed on remote
-```
+![Task failure](https://github.com/spatie/scotty/blob/main/docs/images/scotty-failure.png?raw=true)
+<!-- SCREENSHOT NEEDED: A failed task showing the error output and "✗ Failed at taskName" message -->
 
 After all tasks complete, you get a summary table with timing.
 
@@ -74,6 +63,9 @@ In the Blade format, it becomes `$branch` (camelCase) and `$branch` (snake_case)
 ## Pause and resume
 
 Press `p` any time during execution. Scotty immediately acknowledges the pause request and pauses between the current and next task.
+
+![Pause and resume](https://github.com/spatie/scotty/blob/main/docs/images/scotty-pause.png?raw=true)
+<!-- SCREENSHOT NEEDED: Deploy paused between tasks, showing the "⏸ Paused" message and "press Enter to continue" -->
 
 Press `Enter` to resume, or `Ctrl+C` to cancel.
 

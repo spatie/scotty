@@ -6,7 +6,17 @@
 
 Scotty beams your deployment scripts to remote servers. It's a fresh take on [Laravel Envoy](https://laravel.com/docs/envoy), built from the ground up with better output, a new bash file format, and pause/resume support.
 
-Scotty can read existing `Envoy.blade.php` files, so you can switch over without changing anything. When you're ready, you can migrate to the new `Scotty.sh` format which is pure bash with no templating layer.
+![scotty run deploy](https://github.com/spatie/scotty/blob/main/docs/images/scotty-run-deploy.png?raw=true)
+<!-- SCREENSHOT NEEDED: Full `scotty run deploy` output showing a real deploy with multiple tasks, spinner, output, timing, and summary table -->
+
+## What Scotty adds over Envoy
+
+- **A pure bash file format** with full syntax highlighting and editor support (no more Blade for shell scripts)
+- **Real time output** with a spinner, elapsed timer, and command tracing showing which line is executing
+- **Per task timing** and a summary table when the deploy finishes
+- **Pause and resume** by pressing `p` during a deploy
+- **`scotty doctor`** to validate your file, SSH connectivity, and remote tools before deploying
+- **Envoy compatibility** so you can drop Scotty into any project that already has an `Envoy.blade.php`
 
 ## Support us
 
@@ -55,6 +65,11 @@ Every line is real bash. No templating, no special syntax, full editor support.
 
 Already using [Laravel Envoy](https://laravel.com/docs/envoy)? Scotty reads `Envoy.blade.php` files too. Just run `scotty run deploy` in the same directory.
 
+## Validate your setup
+
+![scotty doctor](https://github.com/spatie/scotty/blob/main/docs/images/scotty-doctor.png?raw=true)
+<!-- SCREENSHOT NEEDED: `scotty doctor` output showing all checks passing on a real server -->
+
 ## Documentation
 
 Full documentation is available at [spatie.be/docs/scotty](https://spatie.be/docs/scotty).
@@ -63,26 +78,6 @@ Full documentation is available at [spatie.be/docs/scotty](https://spatie.be/doc
 - [Running tasks](docs/running-tasks.md) (pretend mode, pause/resume, dynamic options)
 - [Other commands](docs/other-commands.md) (tasks, ssh, init, doctor)
 - [Envoy compatibility](docs/envoy-compatibility.md) (supported features, migration guide)
-
-## Validate your setup
-
-Run `scotty doctor` to check your file, SSH connectivity, and remote tool availability before deploying:
-
-```
-  Scotty Doctor
-
-  ✓ Scotty file found (Scotty.sh)
-  ✓ File parsed successfully (5 tasks, 1 macro)
-  ✓ All macro tasks exist
-
-  Servers
-  ✓ remote (forge@your-server.com) — connected in 0.3s
-
-  Remote tools (remote)
-  ✓ php 8.4.1
-  ✓ composer 2.8.0
-  ✓ git 2.43.0
-```
 
 ## Acknowledgements
 
