@@ -205,14 +205,9 @@ class DoctorCommand extends Command
     {
         $startTime = microtime(true);
 
-        $process = new Process([
-            'ssh',
-            '-o', 'ConnectTimeout=5',
-            '-o', 'BatchMode=yes',
-            $server->host,
-            'echo ok',
-        ]);
+        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$server->host} 'echo ok'";
 
+        $process = Process::fromShellCommandline($command);
         $process->setTimeout(self::SSH_TIMEOUT);
 
         try {
@@ -251,14 +246,9 @@ class DoctorCommand extends Command
             'git --version 2>/dev/null',
         ]);
 
-        $process = new Process([
-            'ssh',
-            '-o', 'ConnectTimeout=5',
-            '-o', 'BatchMode=yes',
-            $server->host,
-            $toolCheckScript,
-        ]);
+        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$server->host} '{$toolCheckScript}'";
 
+        $process = Process::fromShellCommandline($command);
         $process->setTimeout(self::REMOTE_TOOLS_TIMEOUT);
 
         try {
