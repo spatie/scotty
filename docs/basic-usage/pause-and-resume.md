@@ -1,6 +1,6 @@
 ---
 title: Pause and resume
-weight: 1
+weight: 5
 ---
 
 Press `p` any time during execution. Scotty immediately acknowledges the pause request in the status line and pauses between the current and next task.
