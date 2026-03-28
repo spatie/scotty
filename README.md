@@ -8,27 +8,7 @@ Scotty is a tool that runs tasks on your remote servers over SSH. You write your
 
 ![scotty run deploy](https://github.com/spatie/scotty/blob/main/docs/images/scotty-run-deploy.jpg?raw=true)
 
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/scotty.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/scotty)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
-
-## Documentation
-
-You'll find full documentation on [https://spatie.be/docs/scotty](https://spatie.be/docs/scotty).
-
-## Quick start
-
-Install Scotty globally via Composer:
-
-```bash
-composer global require spatie/scotty
-```
-
-Create a `Scotty.sh` file in your project root:
+Here's what a `Scotty.sh` file looks like:
 
 ```bash
 #!/usr/bin/env scotty
@@ -49,13 +29,19 @@ clearCache() {
 }
 ```
 
-Run it:
+Run it with `scotty run deploy`.
 
-```bash
-scotty run deploy
-```
+## Support us
 
-Already using [Laravel Envoy](https://laravel.com/docs/envoy)? Scotty reads `Envoy.blade.php` files too. Just run `scotty run deploy` in the same directory.
+[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/scotty.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/scotty)
+
+We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
+
+We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+
+## Documentation
+
+All documentation is available [on our documentation site](https://spatie.be/docs/scotty).
 
 ## Acknowledgements
 
