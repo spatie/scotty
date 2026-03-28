@@ -96,15 +96,11 @@ Scotty runs each task in order. If something fails (say `composer install` hits 
 
 ## Clean up the repetition
 
-Every task starts with `cd /var/www/my-app`. You can use a variable to avoid repeating the path:
+Every task starts with `cd /var/www/my-app`. You can define a variable after the servers and macro lines to avoid repeating the path. Variables are plain bash, available in all tasks:
 
 ```bash
 APP_DIR="/var/www/my-app"
-```
 
-Put it after the servers and macro lines. Variables are plain bash, available in all tasks:
-
-```bash
 # @task on:remote
 pullCode() {
     cd $APP_DIR
