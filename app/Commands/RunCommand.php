@@ -130,7 +130,7 @@ class RunCommand extends Command
                 $isRemote = collect($task->servers)
                     ->contains(fn (string $name) => $config->getServer($name)?->isLocal() === false);
 
-                $dot = $isRemote ? '<fg=magenta>●</>' : '<fg=blue>●</>';
+                $dot = $isRemote ? '<fg=yellow>●</>' : '<fg=blue>●</>';
 
                 $this->clearSpinnerLine();
                 $this->output->writeln("  {$dot} <options=bold>{$task->name}</> <fg=#4A5568>[{$this->currentStep}/{$total}] on {$servers}</>{$parallel}");
