@@ -55,7 +55,7 @@ it('runs local tasks without formatting errors', function () {
     expect($exitCode)->toBe(0)
         ->and($output)->toContain('hello from scotty')
         ->and($output)->toContain('finished')
-        ->and($output)->toContain('Starting deploy')
+        ->and($output)->toContain('Running deploy')
         ->and($output)->toContain('greet')
         ->and($output)->toContain('done')
         ->and($output)->not->toContain('Invalid option specified');

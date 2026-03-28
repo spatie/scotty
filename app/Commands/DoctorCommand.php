@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Commands\Concerns\RendersBanner;
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Parsing\ParseResult;
 use App\Parsing\ServerDefinition;
@@ -11,6 +12,7 @@ use Throwable;
 
 class DoctorCommand extends Command
 {
+    use RendersBanner;
     use ResolvesScottyFile;
 
     protected $signature = 'doctor
@@ -27,8 +29,8 @@ class DoctorCommand extends Command
 
     public function handle(): int
     {
-        $this->newLine();
-        $this->output->writeln('  <options=bold>Scotty Doctor</>');
+        $this->renderBanner($this->output);
+        $this->output->writeln('  <options=bold>Doctor</>');
         $this->output->writeln('  <fg=#4A5568>Checking your configuration, servers, and remote tools.</>');
         $this->newLine();
 

@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Commands\Concerns\RendersBanner;
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Execution\Executor;
 use App\Execution\TaskResult;
@@ -18,6 +19,7 @@ use function Laravel\Prompts\warning;
 
 class RunCommand extends Command
 {
+    use RendersBanner;
     use ResolvesScottyFile;
 
     protected $signature = 'run
@@ -104,8 +106,8 @@ class RunCommand extends Command
         $this->enablePauseDetection();
         $this->registerSignalHandlers();
 
-        $this->newLine();
-        $this->output->writeln("  <options=bold>Starting {$target}</>");
+        $this->renderBanner($this->output);
+        $this->output->writeln("  <options=bold>Running {$target}</>");
         $this->newLine();
 
         $executor = new Executor;
