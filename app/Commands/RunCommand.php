@@ -281,6 +281,7 @@ class RunCommand extends Command
             $this->output->writeln("  <fg=green>✓ Task done:</> {$task->displayName()} <fg=#4A5568>{$duration}</>");
 
             $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=green>OK</>'];
+            $this->newLine();
 
             return;
         }
@@ -316,6 +317,7 @@ class RunCommand extends Command
         }
 
         $this->timings[] = [$task->displayNameWithEmoji(), $servers, $duration, '<fg=red>FAILED</>'];
+        $this->newLine();
     }
 
     /** @param array<string, TaskResult> $results */
@@ -325,7 +327,6 @@ class RunCommand extends Command
             return;
         }
 
-        $this->newLine();
         table(['Task', 'Server', 'Duration', 'Status'], $this->timings);
 
         $totalDuration = $this->formatDuration(
