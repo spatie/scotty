@@ -73,10 +73,14 @@ class TaskContainer
     {
         $envoyPath = sys_get_temp_dir().'/Envoy'.md5_file($path).'.php';
 
-        file_put_contents(
-            $envoyPath,
-            $compiler->compile(file_get_contents($path), $serversOnly)
-        );
+        $compiled = $compiler->compile(file_get_contents($path), $serversOnly);
+
+        // Replace __DIR__ with the actual source directory, since the compiled
+        // file is written to a temp directory where __DIR__ would resolve incorrectly.
+        $sourceDir = dirname(realpath($path));
+        $compiled = str_replace('__DIR__', "'".addslashes($sourceDir)."'", $compiled);
+
+        file_put_contents($envoyPath, $compiled);
 
         return $envoyPath;
     }
