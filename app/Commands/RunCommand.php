@@ -336,14 +336,16 @@ class RunCommand extends Command
         $totalCount = count($results);
 
         if (! $this->failed) {
-            $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed in {$totalDuration}</>");
+            $time = date('H:i:s');
+            $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed in {$totalDuration}</> <fg=gray>({$time})</>");
             $this->newLine();
 
             return;
         }
 
         $failedTask = array_key_first(array_filter($results, fn (TaskResult $taskResult) => ! $taskResult->succeeded()));
-        $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</>");
+        $time = date('H:i:s');
+        $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</> <fg=gray>({$time})</>");
         $this->newLine();
     }
 
@@ -407,7 +409,8 @@ class RunCommand extends Command
             $this->disablePauseDetection();
 
             $this->newLine();
-            $this->output->writeln('  <fg=yellow;options=bold>Cancelled.</>');
+            $time = date('H:i:s');
+            $this->output->writeln("  <fg=yellow;options=bold>Cancelled.</> <fg=gray>({$time})</>");
             $this->newLine();
 
             exit(130);
