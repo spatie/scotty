@@ -336,7 +336,7 @@ class RunCommand extends Command
         $totalCount = count($results);
 
         if (! $this->failed) {
-            $time = date('H:i:s');
+            $time = $this->currentLocalTime();
             $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed in {$totalDuration}</> <fg=gray>({$time})</>");
             $this->newLine();
 
@@ -344,7 +344,7 @@ class RunCommand extends Command
         }
 
         $failedTask = array_key_first(array_filter($results, fn (TaskResult $taskResult) => ! $taskResult->succeeded()));
-        $time = date('H:i:s');
+        $time = $this->currentLocalTime();
         $this->output->writeln("  <fg=red;options=bold>✗ Failed at {$failedTask}</> <fg=gray>({$time})</>");
         $this->newLine();
     }
@@ -409,7 +409,7 @@ class RunCommand extends Command
             $this->disablePauseDetection();
 
             $this->newLine();
-            $time = date('H:i:s');
+            $time = $this->currentLocalTime();
             $this->output->writeln("  <fg=yellow;options=bold>Cancelled.</> <fg=gray>({$time})</>");
             $this->newLine();
 
@@ -526,6 +526,22 @@ class RunCommand extends Command
         $truncated = mb_substr($text, 0, $maxLength - 1);
 
         return "{$truncated}…";
+    }
+
+    protected function currentLocalTime(): string
+    {
+        $timezone = null;
+
+        $localtime = @readlink('/etc/localtime');
+        if ($localtime && preg_match('#zoneinfo/(.+)$#', $localtime, $matches)) {
+            $timezone = $matches[1];
+        }
+
+        if (! $timezone) {
+            $timezone = trim((string) shell_exec('date +%z'));
+        }
+
+        return (new \DateTime('now', new \DateTimeZone($timezone ?: 'UTC')))->format('H:i:s');
     }
 
     protected function cleanOutputLine(string $line): string
