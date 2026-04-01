@@ -44,6 +44,9 @@ class TaskContainer
     /** @var array<string> */
     protected array $macroStack = [];
 
+    /** @var array<string> */
+    protected array $compiledPaths = [];
+
     /** @var array<string, array<string, mixed>> */
     protected array $macroOptions = [];
 
@@ -62,11 +65,20 @@ class TaskContainer
 
         include $__envoyPath;
 
-        @unlink($__envoyPath);
+        $this->compiledPaths[] = $__envoyPath;
 
         $this->replaceSubTasks();
 
         ob_end_clean();
+    }
+
+    public function cleanup(): void
+    {
+        foreach ($this->compiledPaths as $path) {
+            @unlink($path);
+        }
+
+        $this->compiledPaths = [];
     }
 
     protected function writeCompiledEnvoyFile(Compiler $compiler, string $path, bool $serversOnly): string

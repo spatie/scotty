@@ -16,12 +16,16 @@ class BladeParser implements ParserInterface
 
         $container->load($filePath, $compiler, $data);
 
-        return new ParseResult(
+        $result = new ParseResult(
             servers: $this->buildServers($container),
             tasks: $this->buildTasks($container),
             macros: $this->buildMacros($container),
             hooks: $this->buildHooks($container),
         );
+
+        $container->cleanup();
+
+        return $result;
     }
 
     /** @return array<string, ServerDefinition> */
