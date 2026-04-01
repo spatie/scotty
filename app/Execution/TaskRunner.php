@@ -56,8 +56,16 @@ class TaskRunner
         foreach ($task->servers as $serverName) {
             $server = $config->getServer($serverName);
 
-            if ($server !== null) {
-                $map[$serverName] = $server->host;
+            if ($server === null) {
+                continue;
+            }
+
+            if (count($server->hosts) === 1) {
+                $map[$serverName] = $server->hosts[0];
+            } else {
+                foreach ($server->hosts as $host) {
+                    $map[$host] = $host;
+                }
             }
         }
 

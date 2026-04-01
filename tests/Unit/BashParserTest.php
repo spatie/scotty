@@ -13,11 +13,11 @@ it('parses servers from @servers annotation', function () {
 
     expect($result->servers)->toHaveCount(3)
         ->and($result->servers['local']->name)->toBe('local')
-        ->and($result->servers['local']->host)->toBe('127.0.0.1')
+        ->and($result->servers['local']->hosts)->toBe(['127.0.0.1'])
         ->and($result->servers['production']->name)->toBe('production')
-        ->and($result->servers['production']->host)->toBe('forge@production.example.com')
+        ->and($result->servers['production']->hosts)->toBe(['forge@production.example.com'])
         ->and($result->servers['staging']->name)->toBe('staging')
-        ->and($result->servers['staging']->host)->toBe('forge@staging.example.com');
+        ->and($result->servers['staging']->hosts)->toBe(['forge@staging.example.com']);
 });
 
 it('parses macros from @macro annotation', function () {

@@ -60,7 +60,7 @@ it('returns a server by name', function () {
     $result = createParseResult();
 
     expect($result->getServer('remote'))->not->toBeNull()
-        ->and($result->getServer('remote')->host)->toBe('forge@1.1.1.1');
+        ->and($result->getServer('remote')->hosts)->toBe(['forge@1.1.1.1']);
 });
 
 it('returns null for unknown server', function () {
@@ -100,6 +100,20 @@ it('filters hooks by type', function () {
     expect($result->getHooks(HookType::Before))->toHaveCount(1)
         ->and($result->getHooks(HookType::Success))->toHaveCount(1)
         ->and($result->getHooks(HookType::Error))->toBeEmpty();
+});
+
+it('supports servers with multiple hosts', function () {
+    $result = new ParseResult(
+        servers: [
+            'web' => new ServerDefinition('web', ['forge@1.1.1.1', 'forge@2.2.2.2']),
+            'local' => new ServerDefinition('local', '127.0.0.1'),
+        ],
+    );
+
+    expect($result->getServer('web')->hosts)->toBe(['forge@1.1.1.1', 'forge@2.2.2.2'])
+        ->and($result->getServer('local')->hosts)->toBe(['127.0.0.1'])
+        ->and($result->getServer('local')->isLocal())->toBeTrue()
+        ->and($result->getServer('web')->isLocal())->toBeFalse();
 });
 
 it('returns available targets with tasks and macros', function () {

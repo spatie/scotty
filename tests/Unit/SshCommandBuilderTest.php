@@ -7,6 +7,32 @@ beforeEach(function () {
     $this->builder = new SshCommandBuilder;
 });
 
+it('creates server definition with string host', function () {
+    $server = new ServerDefinition('web', 'forge@1.1.1.1');
+
+    expect($server->name)->toBe('web')
+        ->and($server->hosts)->toBe(['forge@1.1.1.1']);
+});
+
+it('creates server definition with array of hosts', function () {
+    $server = new ServerDefinition('web', ['forge@1.1.1.1', 'forge@2.2.2.2']);
+
+    expect($server->name)->toBe('web')
+        ->and($server->hosts)->toBe(['forge@1.1.1.1', 'forge@2.2.2.2']);
+});
+
+it('detects single local host as local', function () {
+    $server = new ServerDefinition('local', '127.0.0.1');
+
+    expect($server->isLocal())->toBeTrue();
+});
+
+it('detects multi-host server as not local', function () {
+    $server = new ServerDefinition('all', ['127.0.0.1', 'forge@1.1.1.1']);
+
+    expect($server->isLocal())->toBeFalse();
+});
+
 it('detects 127.0.0.1 as local', function () {
     expect(ServerDefinition::isLocalHost('127.0.0.1'))->toBeTrue();
 });

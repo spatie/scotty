@@ -125,8 +125,10 @@ class Executor
                 continue;
             }
 
-            $command = $commandBuilder->buildCommand($server->host, $task->script, $env);
-            $output .= "# On: {$serverName} ({$server->host})\n{$command}\n\n";
+            foreach ($server->hosts as $host) {
+                $command = $commandBuilder->buildCommand($host, $task->script, $env);
+                $output .= "# On: {$serverName} ({$host})\n{$command}\n\n";
+            }
         }
 
         return new TaskResult(

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 
 class TaskContainer
 {
-    /** @var array<string, string> */
+    /** @var array<string, string|array<string>> */
     protected array $servers = [];
 
     /** @var array<string, mixed> */
@@ -106,7 +106,7 @@ class TaskContainer
         $this->servers = $servers;
     }
 
-    public function getServer(string $server): string
+    public function getServer(string $server): string|array
     {
         if (! array_key_exists($server, $this->servers)) {
             throw new Exception("Server [{$server}] is not defined.");
@@ -115,7 +115,7 @@ class TaskContainer
         return $this->servers[$server];
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|array<string>> */
     public function getServers(): array
     {
         return $this->servers;

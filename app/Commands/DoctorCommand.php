@@ -4,7 +4,6 @@ namespace App\Commands;
 
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Parsing\ParseResult;
-use App\Parsing\ServerDefinition;
 use LaravelZero\Framework\Commands\Command;
 use Symfony\Component\Process\Process;
 use Throwable;
@@ -178,34 +177,36 @@ class DoctorCommand extends Command
         $this->output->writeln('  <options=bold>Servers</>');
         $this->output->writeln('  <fg=#4A5568>Testing SSH connectivity to each remote server.</>');
 
-        /** @var array<ServerDefinition> $reachableRemoteServers */
-        $reachableRemoteServers = [];
+        /** @var array<array{name: string, host: string}> $reachableRemoteHosts */
+        $reachableRemoteHosts = [];
 
         foreach ($config->servers as $server) {
             if ($server->isLocal()) {
-                $this->writeSuccess("{$server->name} ({$server->host}) — skipped (local)");
+                $this->writeSuccess("{$server->name} — skipped (local)");
 
                 continue;
             }
 
-            $reachable = $this->checkSshConnectivity($server);
+            foreach ($server->hosts as $host) {
+                $reachable = $this->checkSshConnectivity($server->name, $host);
 
-            if ($reachable) {
-                $reachableRemoteServers[] = $server;
+                if ($reachable) {
+                    $reachableRemoteHosts[] = ['name' => $server->name, 'host' => $host];
+                }
             }
         }
 
-        foreach ($reachableRemoteServers as $server) {
+        foreach ($reachableRemoteHosts as $entry) {
             $this->newLine();
-            $this->checkRemoteTools($server);
+            $this->checkRemoteTools($entry['name'], $entry['host']);
         }
     }
 
-    protected function checkSshConnectivity(ServerDefinition $server): bool
+    protected function checkSshConnectivity(string $name, string $host): bool
     {
         $startTime = microtime(true);
 
-        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$server->host} 'echo ok'";
+        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$host} 'echo ok'";
 
         $process = Process::fromShellCommandline($command);
         $process->setTimeout(self::SSH_TIMEOUT);
@@ -213,14 +214,14 @@ class DoctorCommand extends Command
         try {
             $process->run();
         } catch (Throwable $exception) {
-            $this->writeFailure("{$server->name} ({$server->host}) — connection timed out");
+            $this->writeFailure("{$name} ({$host}) — connection timed out");
             $this->hasFailures = true;
 
             return false;
         }
 
         if (! $process->isSuccessful()) {
-            $this->writeFailure("{$server->name} ({$server->host}) — connection failed");
+            $this->writeFailure("{$name} ({$host}) — connection failed");
             $this->hasFailures = true;
 
             return false;
@@ -228,15 +229,15 @@ class DoctorCommand extends Command
 
         $duration = round(microtime(true) - $startTime, 1);
 
-        $this->writeSuccess("{$server->name} ({$server->host}) — connected in {$duration}s");
+        $this->writeSuccess("{$name} ({$host}) — connected in {$duration}s");
 
         return true;
     }
 
-    protected function checkRemoteTools(ServerDefinition $server): void
+    protected function checkRemoteTools(string $name, string $host): void
     {
-        $this->output->writeln("  <options=bold>Remote tools on {$server->name}</>");
-        $this->output->writeln("  <fg=#4A5568>Checking which tools are available on {$server->host}.</>");
+        $this->output->writeln("  <options=bold>Remote tools on {$name}</>");
+        $this->output->writeln("  <fg=#4A5568>Checking which tools are available on {$host}.</>");
 
         $toolCheckScript = implode('; ', [
             'php -v 2>/dev/null | head -1',
@@ -246,7 +247,7 @@ class DoctorCommand extends Command
             'git --version 2>/dev/null',
         ]);
 
-        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$server->host} '{$toolCheckScript}'";
+        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$host} '{$toolCheckScript}'";
 
         $process = Process::fromShellCommandline($command);
         $process->setTimeout(self::REMOTE_TOOLS_TIMEOUT);
