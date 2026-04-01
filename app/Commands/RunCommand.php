@@ -337,7 +337,10 @@ class RunCommand extends Command
 
         if (! $this->failed) {
             $time = $this->currentLocalTime();
-            $this->output->writeln("  <fg=green;options=bold>✓ All {$totalCount} tasks completed in {$totalDuration}</> <fg=gray>({$time})</>");
+            $taskLabel = $totalCount === 1
+                ? "1 task completed in {$totalDuration}"
+                : "All {$totalCount} tasks completed in {$totalDuration}";
+            $this->output->writeln("  <fg=green;options=bold>✓ {$taskLabel}</> <fg=gray>({$time})</>");
             $this->newLine();
 
             return;
