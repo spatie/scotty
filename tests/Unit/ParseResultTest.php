@@ -21,6 +21,7 @@ function createParseResult(): ParseResult
         ],
         macros: [
             'deploy' => new MacroDefinition('deploy', ['pull', 'build']),
+            'deploy-and-restart' => new MacroDefinition('deploy-and-restart', ['deploy', 'restart']),
         ],
         hooks: [
             new HookDefinition(HookType::Before, 'echo "starting"'),
@@ -79,6 +80,17 @@ it('resolves tasks for a macro name', function () {
         ->and($tasks[1]->name)->toBe('build');
 });
 
+it('resolves tasks for a macro name including other macros', function () {
+    $result = createParseResult();
+
+    $tasks = $result->resolveTasksForTarget('deploy-and-restart');
+
+    expect($tasks)->toHaveCount(3)
+        ->and($tasks[0]->name)->toBe('pull')
+        ->and($tasks[1]->name)->toBe('build')
+        ->and($tasks[2]->name)->toBe('restart');
+});
+
 it('resolves tasks for a single task name', function () {
     $result = createParseResult();
 
@@ -124,5 +136,5 @@ it('returns available targets with tasks and macros', function () {
     expect($targets)->toHaveKey('tasks')
         ->and($targets)->toHaveKey('macros')
         ->and($targets['tasks'])->toBe(['pull', 'build', 'restart'])
-        ->and($targets['macros'])->toBe(['deploy']);
+        ->and($targets['macros'])->toBe(['deploy', 'deploy-and-restart']);
 });
