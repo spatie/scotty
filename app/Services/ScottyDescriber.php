@@ -14,7 +14,7 @@ class ScottyDescriber extends Describer
 
     protected function describeTitle(Application $application, OutputInterface $output): DescriberContract
     {
-        $this->renderBanner($output);
+        $this->renderBanner($output);  
 
         return parent::describeTitle($application, $output);
     }
