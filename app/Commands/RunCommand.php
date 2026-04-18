@@ -5,9 +5,14 @@ namespace App\Commands;
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Execution\Executor;
 use App\Execution\TaskResult;
+use App\Parsing\BashParser;
+use App\Parsing\OptionDefinition;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
 use LaravelZero\Framework\Commands\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\confirm;
@@ -68,17 +73,37 @@ class RunCommand extends Command
 
     protected ?int $cachedTerminalWidth = null;
 
+    protected ?ParseResult $preloadedConfig = null;
+
+    protected ?string $preloadedFilePath = null;
+
+    public function run(InputInterface $input, OutputInterface $output): int
+    {
+        $this->registerDeclaredOptions($input);
+
+        return parent::run($input, $output);
+    }
+
     public function handle(): int
     {
-        $filePath = $this->resolveFilePathOrFail();
+        $filePath = $this->preloadedFilePath ?? $this->resolveFilePathOrFail();
 
         if ($filePath === null) {
             return 1;
         }
 
         $parser = $this->resolveParser($filePath);
-        $dynamicOptions = $this->gatherDynamicOptions();
-        $config = $parser->parse($filePath, $dynamicOptions);
+        $config = $this->preloadedConfig ?? $parser->parse($filePath);
+
+        $dynamicOptions = $this->resolveDeclaredOptions($config->options);
+
+        if ($dynamicOptions === null) {
+            return 1;
+        }
+
+        if ($this->preloadedConfig === null) {
+            $config = $parser->parse($filePath, $dynamicOptions);
+        }
 
         $target = $this->argument('task');
         $tasks = $config->resolveTasksForTarget($target);
@@ -556,31 +581,111 @@ class RunCommand extends Command
         return preg_replace('/\033\[[0-9;]*m/', '', $line);
     }
 
-    /** @return array<string, string> */
-    protected function gatherDynamicOptions(): array
+    /**
+     * Preload the Scotty file so its @option declarations can be registered as
+     * real Symfony options before input binding/validation.
+     *
+     * Only the BashParser is preloaded here; Blade-format Scotty files go
+     * through the standard parse path in handle() and don't yet participate
+     * in declaration-based CLI options.
+     */
+    protected function registerDeclaredOptions(InputInterface $input): void
+    {
+        $confOpt = $input->getParameterOption(['--conf'], null, true);
+        $pathOpt = $input->getParameterOption(['--path'], null, true);
+
+        $filePath = null;
+
+        if (is_string($pathOpt) && file_exists($pathOpt)) {
+            $filePath = $pathOpt;
+        } elseif (is_string($confOpt) && file_exists($confOpt)) {
+            $filePath = $confOpt;
+        } else {
+            foreach (self::SCOTTY_FILENAMES as $candidate) {
+                if (file_exists($candidate)) {
+                    $filePath = $candidate;
+                    break;
+                }
+            }
+        }
+
+        if ($filePath === null) {
+            return;
+        }
+
+        $parser = $this->resolveParser($filePath);
+
+        if (! $parser instanceof BashParser) {
+            return;
+        }
+
+        $config = $parser->parse($filePath);
+
+        foreach ($config->options as $option) {
+            if ($option->isBoolean) {
+                $this->addOption($option->name, null, InputOption::VALUE_NONE, '');
+            } else {
+                $this->addOption($option->name, null, InputOption::VALUE_REQUIRED, '', $option->default);
+            }
+        }
+
+        $this->preloadedConfig = $config;
+        $this->preloadedFilePath = $filePath;
+    }
+
+    /**
+     * Resolve values for the options declared in the Scotty file.
+     *
+     * Precedence for string-valued options: CLI flag > environment variable > declared default.
+     * Boolean flags are always sourced from the CLI (true when passed, absent otherwise).
+     * Required options (declared as `# @option name=`) error here if unresolved.
+     *
+     * @param  array<string, OptionDefinition>  $declared
+     * @return array<string, string>|null  null when a required option is missing (error already reported).
+     */
+    protected function resolveDeclaredOptions(array $declared): ?array
     {
         $data = [];
 
-        $argv = $_SERVER['argv'] ?? [];
+        foreach ($declared as $option) {
+            $key = $option->name;
+            $snakeCase = str_replace('-', '_', $key);
+            $envKey = strtoupper($snakeCase);
 
-        foreach ($argv as $argument) {
-            if (! preg_match('/^--([a-zA-Z][\w-]*)=(.+)$/', $argument, $match)) {
-                continue;
+            if ($option->isBoolean) {
+                if (! $this->option($key)) {
+                    continue;
+                }
+
+                $value = '1';
+            } else {
+                $cliPassed = $this->input->hasParameterOption(['--'.$key], true);
+                $envValue = getenv($envKey);
+
+                if ($cliPassed) {
+                    $value = $this->option($key);
+                } elseif ($envValue !== false && $envValue !== '') {
+                    $value = $envValue;
+                } else {
+                    $value = $option->default;
+                }
+
+                if ($option->isRequired && ($value === null || $value === '')) {
+                    error("Missing required option --{$key}. Declare a default with `# @option {$key}=value` or pass `--{$key}=...`.");
+
+                    return null;
+                }
+
+                if ($value === null) {
+                    continue;
+                }
             }
-
-            $key = $match[1];
-
-            if (in_array($key, ['continue', 'pretend', 'path', 'conf', 'summary'])) {
-                continue;
-            }
-
-            $data[$key] = $match[2];
 
             $camelCase = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $key))));
-            $snakeCase = str_replace('-', '_', $key);
 
-            $data[$camelCase] = $match[2];
-            $data[$snakeCase] = $match[2];
+            $data[$key] = $value;
+            $data[$snakeCase] = $value;
+            $data[$camelCase] = $value;
         }
 
         return $data;

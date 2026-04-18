@@ -92,10 +92,17 @@ class Executor
     {
         $preamble = $config->variablePreamble;
 
+        $seen = [];
+
         foreach ($env as $key => $value) {
-            $upperKey = strtoupper($key);
-            $escapedValue = escapeshellarg($value);
-            $preamble .= "\n{$upperKey}={$escapedValue}";
+            $upperKey = strtoupper(str_replace('-', '_', $key));
+
+            if (isset($seen[$upperKey])) {
+                continue;
+            }
+
+            $seen[$upperKey] = true;
+            $preamble .= "\n{$upperKey}=".escapeshellarg($value);
         }
 
         $debugTrap = "trap 'echo \"ENVOY_TRACE:\$BASH_COMMAND\" >&2' DEBUG";
