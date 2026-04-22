@@ -1,8 +1,18 @@
-# Scotty: a beautiful SSH task runner
+<div align="left">
+    <a href="https://spatie.be/open-source?utm_source=github&utm_medium=banner&utm_campaign=scotty">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://spatie.be/packages/header/scotty/html/dark.webp?1776851353">
+        <img alt="Logo for scotty" src="https://spatie.be/packages/header/scotty/html/light.webp?1776851353">
+      </picture>
+    </a>
+
+<h1>Scotty: a beautiful SSH task runner</h1>
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/scotty.svg?style=flat-square)](https://packagist.org/packages/spatie/scotty)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/spatie/scotty/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/spatie/scotty/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/spatie/scotty.svg?style=flat-square)](https://packagist.org/packages/spatie/scotty)
+
+</div>
 
 Scotty is a tool that runs tasks on your remote servers over SSH. You write your tasks in a `Scotty.sh` file (plain bash with annotation comments), and Scotty takes care of connecting, running each script, and showing you exactly what's happening. It's fully compatible with [Laravel Envoy](https://laravel.com/docs/envoy), so you can use it as a drop-in replacement.
 
