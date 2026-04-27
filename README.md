@@ -51,6 +51,13 @@ chmod +x scotty
 ./scotty list
 ```
 
+To install it globally, drop the phar somewhere on your `$PATH`:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o /usr/local/bin/scotty
+chmod +x /usr/local/bin/scotty
+```
+
 You can also install it globally with Composer:
 
 ```bash

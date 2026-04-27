@@ -19,7 +19,21 @@ Commit the phar to your repository so everyone on the team uses the same version
 
 ## Globally
 
-You can install Scotty as a global Composer package:
+The simplest way to install Scotty globally is to drop the phar somewhere on your `$PATH`:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o /usr/local/bin/scotty
+chmod +x /usr/local/bin/scotty
+scotty list
+```
+
+Any directory on your `$PATH` works. Common alternatives are `~/.local/bin` (no `sudo` needed) or `~/bin`.
+
+To upgrade later, re-run the same `curl` command.
+
+### Via Composer
+
+You can also install Scotty as a global Composer package:
 
 ```bash
 composer global require spatie/scotty
