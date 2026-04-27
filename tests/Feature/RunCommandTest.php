@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Exception\ExceptionInterface;
+use Symfony\Component\Process\Process;
 
 beforeEach(function () {
     $this->fixturePath = realpath(__DIR__.'/../fixtures');
@@ -172,7 +174,7 @@ BASH);
         ]);
 
         test()->fail('Expected an exception for undeclared --branch flag.');
-    } catch (\Symfony\Component\Console\Exception\ExceptionInterface $e) {
+    } catch (ExceptionInterface $e) {
         expect($e->getMessage())->toContain('--branch');
     } finally {
         @unlink($fixture);
@@ -466,7 +468,7 @@ BASH);
     $binary = base_path('scotty');
 
     try {
-        $process = new \Symfony\Component\Process\Process([
+        $process = new Process([
             PHP_BINARY,
             $binary,
             'run',

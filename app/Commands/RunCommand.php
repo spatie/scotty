@@ -641,7 +641,7 @@ class RunCommand extends Command
      * Required options (declared as `# @option name=`) error here if unresolved.
      *
      * @param  array<string, OptionDefinition>  $declared
-     * @return array<string, string>|null  null when a required option is missing (error already reported).
+     * @return array<string, string>|null null when a required option is missing (error already reported).
      */
     protected function resolveDeclaredOptions(array $declared): ?array
     {
