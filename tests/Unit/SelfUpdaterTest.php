@@ -52,6 +52,28 @@ it('substitutes the version into the download URL template', function () {
     expect($receivedUrl)->toBe('https://example.test/scotty-1.4.0.phar');
 });
 
+it('invokes the beforeCommit callback while the original phar is still in place', function () {
+    $payload = str_repeat('NEW', SelfUpdater::MIN_PHAR_SIZE_BYTES);
+
+    $updater = new SelfUpdater(
+        downloader: fn (): string => $payload,
+    );
+
+    $contentsAtCallback = null;
+
+    $result = $updater->update(
+        '1.4.0',
+        $this->pharPath,
+        beforeCommit: function () use (&$contentsAtCallback) {
+            $contentsAtCallback = file_get_contents($this->pharPath);
+        },
+    );
+
+    expect($result->succeeded)->toBeTrue()
+        ->and($contentsAtCallback)->toBe(str_repeat('OLD', 1024))
+        ->and(file_get_contents($this->pharPath))->toBe($payload);
+});
+
 it('returns failure when the download is suspiciously small', function () {
     $updater = new SelfUpdater(
         downloader: fn (): string => 'tiny',
