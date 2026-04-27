@@ -181,6 +181,46 @@ BASH);
     }
 });
 
+it('evaluates the preamble locally once so dynamic values stay stable across tasks in a macro', function () {
+    $fixture = $this->fixturePath.'/zero-downtime.sh';
+    file_put_contents($fixture, <<<'BASH'
+# @servers local=127.0.0.1
+
+NEW_RELEASE_NAME=$(date "+%Y%m%d-%H%M%S%N")
+NEW_RELEASE_DIR="app/${NEW_RELEASE_NAME}"
+
+# @macro release test_start test_end
+
+# @task on:local
+test_start() {
+    echo "${NEW_RELEASE_DIR}"
+}
+
+# @task on:local
+test_end() {
+    echo "${NEW_RELEASE_DIR}"
+}
+BASH);
+
+    try {
+        Artisan::call('run', [
+            'task' => 'release',
+            '--pretend' => true,
+            '--conf' => $fixture,
+        ]);
+
+        $output = Artisan::output();
+
+        preg_match_all("/NEW_RELEASE_NAME='([^']+)'/", $output, $matches);
+
+        expect($matches[1])->toHaveCount(2)
+            ->and($matches[1][0])->toBe($matches[1][1])
+            ->and($output)->toContain("NEW_RELEASE_DIR='app/{$matches[1][0]}'");
+    } finally {
+        @unlink($fixture);
+    }
+});
+
 it('exposes dashed option names as snake_case uppercase env vars', function () {
     $fixture = $this->fixturePath.'/dashed-options.sh';
     file_put_contents($fixture, <<<'BASH'

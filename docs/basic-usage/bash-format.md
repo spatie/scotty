@@ -120,6 +120,10 @@ NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 
 These are plain bash variables, so computed values like `$(date)` work naturally. All variables are available in all tasks.
 
+Top-level variable assignments are evaluated **once locally** before the first task runs. The captured values are then injected into every task's script. This means a value like `NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)` produces the same timestamp in every task of the same run, which is what you want for zero-downtime deploys where multiple tasks need to agree on a release directory.
+
+Helper functions defined at the top of the file still run inside each task on the remote server. Side effects in top-level assignments (`mkdir`, `rm`, etc.) happen on your local machine, not on the remote. If you need work to happen remotely, put it in a task.
+
 You can also accept variables from the command line by declaring them with `# @option`. Three forms are supported:
 
 ```bash

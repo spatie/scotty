@@ -12,6 +12,7 @@ class Executor
 {
     public function __construct(
         protected TaskRunner $taskRunner = new TaskRunner,
+        protected PreambleEvaluator $preambleEvaluator = new PreambleEvaluator,
     ) {}
 
     /**
@@ -86,23 +87,40 @@ class Executor
 
     /**
      * @param  array<TaskDefinition>  $tasks
+     * @param  array<string, string>  $env
      * @return array<TaskDefinition>
      */
     protected function prependVariables(array $tasks, ParseResult $config, array $env): array
     {
-        $preamble = $config->variablePreamble;
+        $evaluated = $this->preambleEvaluator->evaluate(
+            $config->variablePreamble,
+            $this->buildEnvForPreamble($env),
+        );
 
-        $seen = [];
+        $assignments = $evaluated->variables;
 
         foreach ($env as $key => $value) {
             $upperKey = strtoupper(str_replace('-', '_', $key));
 
-            if (isset($seen[$upperKey])) {
+            if (isset($assignments[$upperKey])) {
                 continue;
             }
 
-            $seen[$upperKey] = true;
-            $preamble .= "\n{$upperKey}=".escapeshellarg($value);
+            $assignments[$upperKey] = $value;
+        }
+
+        $assignmentLines = [];
+
+        foreach ($assignments as $name => $value) {
+            $assignmentLines[] = "{$name}=".escapeshellarg($value);
+        }
+
+        $preamble = implode("\n", $assignmentLines);
+
+        if ($evaluated->remainingPreamble !== '') {
+            $preamble = $preamble === ''
+                ? $evaluated->remainingPreamble
+                : "{$preamble}\n\n{$evaluated->remainingPreamble}";
         }
 
         $debugTrap = "trap 'echo \"ENVOY_TRACE:\$BASH_COMMAND\" >&2' DEBUG";
@@ -118,6 +136,22 @@ class Executor
             confirm: $task->confirm,
             emoji: $task->emoji,
         ), $tasks);
+    }
+
+    /**
+     * @param  array<string, string>  $env
+     * @return array<string, string>
+     */
+    protected function buildEnvForPreamble(array $env): array
+    {
+        $result = [];
+
+        foreach ($env as $key => $value) {
+            $upperKey = strtoupper(str_replace('-', '_', $key));
+            $result[$upperKey] = $value;
+        }
+
+        return $result;
     }
 
     protected function pretendTask(TaskDefinition $task, ParseResult $config, array $env): TaskResult
