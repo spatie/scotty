@@ -19,6 +19,14 @@ You can define as many as you need:
 # @servers local=127.0.0.1 web-1=deployer@1.1.1.1 web-2=deployer@2.2.2.2
 ```
 
+If your server listens on a non-default SSH port, append it to the host with a colon:
+
+```bash
+# @servers remote=deployer@your-server.com:2222
+```
+
+For more complex SSH options (identity files, jump hosts, ProxyCommand, etc.), put them in `~/.ssh/config` under a `Host` block and reference that host name from `@servers`.
+
 ## Tasks
 
 A task is just a bash function with a `# @task` annotation above it. The `on:` parameter tells Scotty which server to run it on:

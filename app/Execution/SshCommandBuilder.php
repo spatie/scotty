@@ -16,14 +16,15 @@ class SshCommandBuilder
     public function buildProcess(string $host, string $script, array $env = []): Process
     {
         $env['ENVOY_HOST'] = $host;
-        $target = $this->resolveHost($host);
+        [$bareHost, $port] = $this->extractPort($host);
+        $target = $this->resolveHost($bareHost);
 
         if (ServerDefinition::isLocalHost($target)) {
             return Process::fromShellCommandline($script, null, $env)
                 ->setTimeout(null);
         }
 
-        $command = $this->buildSshCommand($target, $script, $env);
+        $command = $this->buildSshCommand($target, $port, $script, $env);
 
         return Process::fromShellCommandline($command)
             ->setTimeout(null);
@@ -33,13 +34,24 @@ class SshCommandBuilder
     public function buildCommand(string $host, string $script, array $env = []): string
     {
         $env['ENVOY_HOST'] = $host;
-        $target = $this->resolveHost($host);
+        [$bareHost, $port] = $this->extractPort($host);
+        $target = $this->resolveHost($bareHost);
 
         if (ServerDefinition::isLocalHost($target)) {
             return $script;
         }
 
-        return $this->buildSshCommand($target, $script, $env);
+        return $this->buildSshCommand($target, $port, $script, $env);
+    }
+
+    /** @return array{string, ?int} */
+    protected function extractPort(string $host): array
+    {
+        if (preg_match('/^(.+):(\d+)$/', $host, $match)) {
+            return [$match[1], (int) $match[2]];
+        }
+
+        return [$host, null];
     }
 
     protected function resolveHost(string $host): string
@@ -54,9 +66,10 @@ class SshCommandBuilder
     }
 
     /** @param array<string, string> $env */
-    protected function buildSshCommand(string $target, string $script, array $env): string
+    protected function buildSshCommand(string $target, ?int $port, string $script, array $env): string
     {
         $delimiter = 'EOF-SCOTTY';
+        $portFlag = $port !== null ? "-p {$port} " : '';
 
         $exports = [];
 
@@ -67,7 +80,7 @@ class SshCommandBuilder
         }
 
         $parts = [
-            "ssh {$target} 'bash -se' << \\{$delimiter}",
+            "ssh {$portFlag}{$target} 'bash -se' << \\{$delimiter}",
             ...$exports,
             'set -e',
             $script,
