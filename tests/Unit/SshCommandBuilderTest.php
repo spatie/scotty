@@ -95,3 +95,28 @@ it('includes set -e in remote command', function () {
 
     expect($command)->toContain('set -e');
 });
+
+it('passes a custom port to ssh when host uses host:port syntax', function () {
+    $command = $this->builder->buildCommand('forge@1.1.1.1:2222', 'echo "hello"');
+
+    expect($command)->toContain('ssh -p 2222 forge@1.1.1.1');
+});
+
+it('passes a custom port for hostnames without a user', function () {
+    $command = $this->builder->buildCommand('example.com:2222', 'echo "hello"');
+
+    expect($command)->toContain('ssh -p 2222 example.com');
+});
+
+it('does not add a port flag when none is specified', function () {
+    $command = $this->builder->buildCommand('forge@1.1.1.1', 'echo "hello"');
+
+    expect($command)->toContain('ssh forge@1.1.1.1')
+        ->and($command)->not->toContain('-p ');
+});
+
+it('does not treat port-like syntax on a local host as a port', function () {
+    $command = $this->builder->buildCommand('127.0.0.1', 'echo "hello"');
+
+    expect($command)->toBe('echo "hello"');
+});
