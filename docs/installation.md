@@ -3,6 +3,22 @@ title: Installation & setup
 weight: 4
 ---
 
+Scotty ships as a single-file phar executable. There are two ways to install it.
+
+## Per project (recommended)
+
+Download the phar from the latest GitHub release and drop it into your project:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o scotty
+chmod +x scotty
+./scotty list
+```
+
+Commit the phar to your repository so everyone on the team uses the same version, or fetch it during your build step.
+
+## Globally
+
 You can install Scotty as a global Composer package:
 
 ```bash
@@ -20,6 +36,8 @@ Once installed, you should be able to run:
 ```bash
 scotty list
 ```
+
+> Installing Scotty as a per-project Composer dev dependency (`composer require --dev spatie/scotty`) is not supported. Scotty is a Laravel Zero application and its `illuminate/*` requirements will conflict with the host application's. Use the phar download or the global install instead.
 
 ## Creating your first Scotty file
 

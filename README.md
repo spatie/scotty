@@ -41,6 +41,24 @@ clearCache() {
 
 Run it with `scotty run deploy`.
 
+## Installation
+
+Scotty ships as a single-file phar. The recommended way to install it per project is:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o scotty
+chmod +x scotty
+./scotty list
+```
+
+You can also install it globally with Composer:
+
+```bash
+composer global require spatie/scotty
+```
+
+See the [installation docs](https://spatie.be/docs/scotty/v1/installation-setup) for details and other options.
+
 ## Support us
 
 [<img src="https://github-ads.s3.eu-central-1.amazonaws.com/scotty.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/scotty)

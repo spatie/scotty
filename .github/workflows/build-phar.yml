@@ -1,0 +1,32 @@
+name: Build phar
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: mbstring, zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Build phar
+        run: php scotty app:build --build-version=${{ github.event.release.tag_name }} --no-interaction
+
+      - name: Attach phar to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: builds/scotty
