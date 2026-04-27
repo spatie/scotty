@@ -147,7 +147,7 @@ class DoctorCommand extends Command
             return;
         }
 
-        $this->writeSuccess('All macro tasks exist');
+        $this->writeSuccess('All macro references resolve');
     }
 
     /** @return array<string> */
@@ -156,12 +156,16 @@ class DoctorCommand extends Command
         $invalid = [];
 
         foreach ($config->macros as $macro) {
-            foreach ($macro->tasks as $taskName) {
-                if ($config->getTask($taskName) !== null) {
+            foreach ($macro->tasks as $targetName) {
+                if ($config->getTask($targetName) !== null) {
                     continue;
                 }
 
-                $invalid[] = "Macro \"{$macro->name}\" references undefined task \"{$taskName}\"";
+                if ($config->getMacro($targetName) !== null) {
+                    continue;
+                }
+
+                $invalid[] = "Macro \"{$macro->name}\" references undefined task or macro \"{$targetName}\"";
             }
         }
 
