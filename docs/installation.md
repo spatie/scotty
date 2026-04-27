@@ -3,9 +3,11 @@ title: Installation & setup
 weight: 4
 ---
 
-Scotty ships as a single-file phar executable. There are two ways to install it.
+Scotty ships as a single-file phar executable. The phar download is the preferred installation method. Install it once globally, or commit it per project.
 
-## Per project (recommended)
+The phar bundles its own PHP requirements check. If you run it on a PHP version older than 8.4 (or with a missing required extension), Scotty fails fast with a clear error before any task runs.
+
+## Per project
 
 Download the phar from the latest GitHub release and drop it into your project:
 
@@ -19,7 +21,19 @@ Commit the phar to your repository so everyone on the team uses the same version
 
 ## Globally
 
-You can install Scotty as a global Composer package:
+The simplest way to install Scotty globally is to drop the phar somewhere on your `$PATH`:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o /usr/local/bin/scotty
+chmod +x /usr/local/bin/scotty
+scotty list
+```
+
+Any directory on your `$PATH` works. Common alternatives are `~/.local/bin` (no `sudo` needed) or `~/bin`.
+
+### Via Composer
+
+You can also install Scotty as a global Composer package:
 
 ```bash
 composer global require spatie/scotty
@@ -31,13 +45,23 @@ Make sure Composer's global bin directory is in your `$PATH`. If you're not sure
 composer global config bin-dir --absolute
 ```
 
-Once installed, you should be able to run:
+> Installing Scotty as a per-project Composer dev dependency (`composer require --dev spatie/scotty`) is not supported. Scotty is a Laravel Zero application and its `illuminate/*` requirements will conflict with the host application's. Use the phar download or the global install instead.
+
+## Updating
+
+Phar installs of Scotty offer to update themselves automatically. After a successful `scotty run`, Scotty checks GitHub for a newer release (once a day, cached locally). If a newer version is available, Scotty asks at the end of the run whether you want to update. The deploy always finishes first, so the prompt never blocks your release.
+
+To update on demand, run:
 
 ```bash
-scotty list
+scotty self-update
 ```
 
-> Installing Scotty as a per-project Composer dev dependency (`composer require --dev spatie/scotty`) is not supported. Scotty is a Laravel Zero application and its `illuminate/*` requirements will conflict with the host application's. Use the phar download or the global install instead.
+This downloads the latest phar and replaces the running binary in place. Pass `--force` to re-download even if you're already on the latest version.
+
+To skip the post-run update check, pass `--no-update-check` to `scotty run` or set `SCOTTY_NO_UPDATE_CHECK=1` (recognized values: `1`, `true`, `yes`, `on`). The check is also skipped automatically when Scotty is running non-interactively (for example in CI).
+
+Composer global installs upgrade with `composer global update spatie/scotty`.
 
 ## Creating your first Scotty file
 

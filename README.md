@@ -43,12 +43,19 @@ Run it with `scotty run deploy`.
 
 ## Installation
 
-Scotty ships as a single-file phar. The recommended way to install it per project is:
+Scotty ships as a single-file phar. Downloading the phar is the preferred install. Drop it in your project:
 
 ```bash
 curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o scotty
 chmod +x scotty
 ./scotty list
+```
+
+Or install it globally on your `$PATH`:
+
+```bash
+curl -L https://github.com/spatie/scotty/releases/latest/download/scotty -o /usr/local/bin/scotty
+chmod +x /usr/local/bin/scotty
 ```
 
 You can also install it globally with Composer:

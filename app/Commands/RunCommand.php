@@ -8,7 +8,11 @@ use App\Execution\TaskResult;
 use App\Parsing\OptionDefinition;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
+use App\Updater\SelfUpdater;
+use App\Updater\UpdateCachePath;
+use App\Updater\UpdateChecker;
 use LaravelZero\Framework\Commands\Command;
+use Phar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -30,7 +34,8 @@ class RunCommand extends Command
         {--pretend : Dump the script instead of running it}
         {--path= : Path to the Scotty file}
         {--conf= : Scotty filename}
-        {--summary : Only show task results, hide output}';
+        {--summary : Only show task results, hide output}
+        {--no-update-check : Skip the post-run check for a newer Scotty release}';
 
     protected $description = 'Run a task or macro';
 
@@ -184,7 +189,78 @@ class RunCommand extends Command
         $this->disablePauseDetection();
         $this->writeResultSummary($results);
 
+        $this->offerSelfUpdate();
+
         return $this->failed ? 1 : 0;
+    }
+
+    protected function offerSelfUpdate(): void
+    {
+        if (! $this->shouldOfferUpdate()) {
+            return;
+        }
+
+        $pharPath = Phar::running(false);
+        $currentVersion = $this->getApplication()->getVersion();
+
+        $checker = new UpdateChecker(
+            currentVersion: $currentVersion,
+            cacheDirectory: UpdateCachePath::default(),
+        );
+
+        $newerVersion = $checker->findNewerVersion();
+
+        if ($newerVersion === null) {
+            return;
+        }
+
+        info("A new version of Scotty is available: {$newerVersion} (you're on {$currentVersion}).");
+
+        if (! confirm('Update now?', default: false)) {
+            return;
+        }
+
+        $result = (new SelfUpdater)->update($newerVersion, $pharPath);
+
+        if ($result->succeeded) {
+            info("Updated to {$newerVersion}.");
+
+            return;
+        }
+
+        warning("Update failed: {$result->error}");
+    }
+
+    protected function shouldOfferUpdate(): bool
+    {
+        if ($this->failed) {
+            return false;
+        }
+
+        if ($this->option('no-update-check')) {
+            return false;
+        }
+
+        if ($this->isUpdateCheckDisabledByEnv()) {
+            return false;
+        }
+
+        if (! stream_isatty(STDIN) || ! stream_isatty(STDOUT)) {
+            return false;
+        }
+
+        return Phar::running(false) !== '';
+    }
+
+    protected function isUpdateCheckDisabledByEnv(): bool
+    {
+        $flag = getenv('SCOTTY_NO_UPDATE_CHECK');
+
+        if ($flag === false) {
+            return false;
+        }
+
+        return in_array(strtolower($flag), ['1', 'true', 'yes', 'on'], true);
     }
 
     protected function buildSpinnerContent(): string
