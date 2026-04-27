@@ -76,12 +76,14 @@ class InitCommand extends Command
 
     protected function bladeTemplate(string $host): string
     {
-        return <<<'BLADE'
-        @servers(['local' => '127.0.0.1', 'remote' => '%s'])
+        return <<<BLADE
+        @servers(['local' => '127.0.0.1', 'remote' => '{$host}'])
+
+        @option('branch=main')
 
         @task('deploy', ['on' => 'remote'])
             cd /home/forge/myapp
-            git pull origin {{ $branch }}
+            git pull origin {{ \$branch }}
             php artisan migrate --force
         @endtask
         BLADE;

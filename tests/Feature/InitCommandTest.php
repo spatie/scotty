@@ -41,6 +41,13 @@ it('creates a Scotty.blade.php file when blade format selected', function () {
         ->assertExitCode(0);
 
     expect(file_exists($this->tempDir.'/Scotty.blade.php'))->toBeTrue();
+
+    $content = file_get_contents($this->tempDir.'/Scotty.blade.php');
+
+    expect($content)->toContain("'remote' => 'forge@example.com'")
+        ->and($content)->toContain("@option('branch=main')")
+        ->and($content)->toContain('git pull origin {{ $branch }}')
+        ->and($content)->not->toContain('%s');
 });
 
 it('fails when file already exists', function () {
