@@ -264,66 +264,20 @@ class DoctorCommand extends Command
         $output = trim($process->getOutput());
         $lines = $output !== '' ? explode("\n", $output) : [];
 
-        $this->reportToolVersion('php', $this->extractPhpVersion($lines));
-        $this->reportToolVersion('composer', $this->extractComposerVersion($lines));
-        $this->reportToolVersion('node', $this->extractNodeVersion($lines));
-        $this->reportToolVersion('npm', $this->extractNpmVersion($lines));
-        $this->reportToolVersion('git', $this->extractGitVersion($lines));
+        $this->reportToolVersion('php', $this->extractVersion($lines, '/^PHP (\d+\.\d+\.\d+)/'));
+        $this->reportToolVersion('composer', $this->extractVersion($lines, '/Composer.*?(\d+\.\d+\.\d+)/'));
+        $this->reportToolVersion('node', $this->extractVersion($lines, '/^v(\d+\.\d+\.\d+)/'));
+        $this->reportToolVersion('npm', $this->extractVersion($lines, '/^(\d+\.\d+\.\d+)$/', trimLine: true));
+        $this->reportToolVersion('git', $this->extractVersion($lines, '/git version (\d+\.\d+\.\d+)/'));
     }
 
     /** @param array<string> $lines */
-    protected function extractPhpVersion(array $lines): ?string
+    protected function extractVersion(array $lines, string $pattern, bool $trimLine = false): ?string
     {
         foreach ($lines as $line) {
-            if (preg_match('/^PHP (\d+\.\d+\.\d+)/', $line, $matches)) {
-                return $matches[1];
-            }
-        }
+            $candidate = $trimLine ? trim($line) : $line;
 
-        return null;
-    }
-
-    /** @param array<string> $lines */
-    protected function extractComposerVersion(array $lines): ?string
-    {
-        foreach ($lines as $line) {
-            if (preg_match('/Composer.*?(\d+\.\d+\.\d+)/', $line, $matches)) {
-                return $matches[1];
-            }
-        }
-
-        return null;
-    }
-
-    /** @param array<string> $lines */
-    protected function extractNodeVersion(array $lines): ?string
-    {
-        foreach ($lines as $line) {
-            if (preg_match('/^v(\d+\.\d+\.\d+)/', $line, $matches)) {
-                return $matches[1];
-            }
-        }
-
-        return null;
-    }
-
-    /** @param array<string> $lines */
-    protected function extractNpmVersion(array $lines): ?string
-    {
-        foreach ($lines as $line) {
-            if (preg_match('/^(\d+\.\d+\.\d+)$/', trim($line), $matches)) {
-                return $matches[1];
-            }
-        }
-
-        return null;
-    }
-
-    /** @param array<string> $lines */
-    protected function extractGitVersion(array $lines): ?string
-    {
-        foreach ($lines as $line) {
-            if (preg_match('/git version (\d+\.\d+\.\d+)/', $line, $matches)) {
+            if (preg_match($pattern, $candidate, $matches)) {
                 return $matches[1];
             }
         }

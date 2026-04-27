@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Commands\Concerns\ResolvesScottyFile;
+use App\Parsing\ParseResult;
 use LaravelZero\Framework\Commands\Command;
 
 class TasksCommand extends Command
@@ -23,56 +24,60 @@ class TasksCommand extends Command
             return 1;
         }
 
-        $parser = $this->resolveParser($filePath);
-        $config = $parser->parse($filePath);
-
+        $config = $this->resolveParser($filePath)->parse($filePath);
         $available = $config->availableTargets();
 
         $this->newLine();
 
         if ($available['macros'] !== []) {
-            $this->output->writeln('  <options=bold>Macros</>');
-            $this->newLine();
-
-            foreach ($available['macros'] as $name) {
-                $macro = $config->getMacro($name);
-                $taskList = array_map(function (string $taskName) use ($config) {
-                    $task = $config->getTask($taskName);
-
-                    if ($task === null) {
-                        return $taskName;
-                    }
-
-                    return $task->displayNameWithEmoji();
-                }, $macro->tasks);
-
-                $this->output->writeln("  <fg=green>{$name}</>");
-
-                foreach ($taskList as $index => $taskDisplay) {
-                    $number = $index + 1;
-                    $this->output->writeln("    <fg=#4A5568>{$number}.</> {$taskDisplay}");
-                }
-
-                $this->newLine();
-            }
+            $this->renderMacros($config, $available['macros']);
         }
 
         if ($available['tasks'] !== []) {
-            $this->output->writeln('  <options=bold>Tasks</>');
-            $this->newLine();
+            $this->renderTasks($config, $available['tasks']);
+        }
 
-            foreach ($available['tasks'] as $name) {
-                $task = $config->getTask($name);
-                $servers = implode(', ', $task->servers);
-                $parallel = $task->parallel ? ' <fg=cyan>parallel</>' : '';
-                $displayName = $task->displayNameWithEmoji();
+        return 0;
+    }
 
-                $this->output->writeln("  {$displayName}  <fg=#4A5568>on {$servers}</>{$parallel}");
+    /** @param array<string> $macroNames */
+    protected function renderMacros(ParseResult $config, array $macroNames): void
+    {
+        $this->output->writeln('  <options=bold>Macros</>');
+        $this->newLine();
+
+        foreach ($macroNames as $name) {
+            $macro = $config->getMacro($name);
+
+            $this->output->writeln("  <fg=green>{$name}</>");
+
+            foreach ($macro->tasks as $index => $taskName) {
+                $task = $config->getTask($taskName);
+                $taskDisplay = $task !== null ? $task->displayNameWithEmoji() : $taskName;
+                $number = $index + 1;
+
+                $this->output->writeln("    <fg=#4A5568>{$number}.</> {$taskDisplay}");
             }
 
             $this->newLine();
         }
+    }
 
-        return 0;
+    /** @param array<string> $taskNames */
+    protected function renderTasks(ParseResult $config, array $taskNames): void
+    {
+        $this->output->writeln('  <options=bold>Tasks</>');
+        $this->newLine();
+
+        foreach ($taskNames as $name) {
+            $task = $config->getTask($name);
+            $servers = implode(', ', $task->servers);
+            $parallel = $task->parallel ? ' <fg=cyan>parallel</>' : '';
+            $displayName = $task->displayNameWithEmoji();
+
+            $this->output->writeln("  {$displayName}  <fg=#4A5568>on {$servers}</>{$parallel}");
+        }
+
+        $this->newLine();
     }
 }

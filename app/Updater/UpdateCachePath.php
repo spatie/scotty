@@ -8,8 +8,10 @@ class UpdateCachePath
     {
         $xdgCacheHome = getenv('XDG_CACHE_HOME');
 
-        if (is_string($xdgCacheHome) && $xdgCacheHome !== '') {
-            return $xdgCacheHome.'/scotty';
+        if (is_string($xdgCacheHome)) {
+            if ($xdgCacheHome !== '') {
+                return "{$xdgCacheHome}/scotty";
+            }
         }
 
         $home = getenv('HOME');
@@ -22,6 +24,6 @@ class UpdateCachePath
             return sys_get_temp_dir().'/scotty';
         }
 
-        return $home.'/.cache/scotty';
+        return "{$home}/.cache/scotty";
     }
 }

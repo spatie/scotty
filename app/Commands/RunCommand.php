@@ -11,6 +11,8 @@ use App\Parsing\TaskDefinition;
 use App\Updater\SelfUpdater;
 use App\Updater\UpdateCachePath;
 use App\Updater\UpdateChecker;
+use DateTime;
+use DateTimeZone;
 use LaravelZero\Framework\Commands\Command;
 use Phar;
 use Symfony\Component\Console\Input\InputInterface;
@@ -546,7 +548,7 @@ class RunCommand extends Command
 
         $input = @fread(STDIN, 1);
 
-        if (! in_array($input, ['p', 'P'])) {
+        if (! in_array($input, ['p', 'P'], true)) {
             return;
         }
 
@@ -629,18 +631,26 @@ class RunCommand extends Command
 
     protected function currentLocalTime(): string
     {
-        $timezone = null;
+        $timezone = $this->detectSystemTimezone();
 
+        return (new DateTime('now', new DateTimeZone($timezone)))->format('H:i:s');
+    }
+
+    protected function detectSystemTimezone(): string
+    {
         $localtime = @readlink('/etc/localtime');
+
         if ($localtime && preg_match('#zoneinfo/(.+)$#', $localtime, $matches)) {
-            $timezone = $matches[1];
+            return $matches[1];
         }
 
-        if (! $timezone) {
-            $timezone = trim((string) shell_exec('date +%z'));
+        $offset = trim((string) shell_exec('date +%z'));
+
+        if ($offset !== '') {
+            return $offset;
         }
 
-        return (new \DateTime('now', new \DateTimeZone($timezone ?: 'UTC')))->format('H:i:s');
+        return 'UTC';
     }
 
     protected function cleanOutputLine(string $line): string
@@ -721,35 +731,17 @@ class RunCommand extends Command
         foreach ($declared as $option) {
             $key = $option->name;
             $snakeCase = str_replace('-', '_', $key);
-            $envKey = strtoupper($snakeCase);
 
-            if ($option->isBoolean) {
-                if (! $this->option($key)) {
-                    continue;
-                }
+            $value = $this->resolveOptionValue($option, $snakeCase);
 
-                $value = '1';
-            } else {
-                $cliPassed = $this->input->hasParameterOption(['--'.$key], true);
-                $envValue = getenv($envKey);
+            if ($option->isRequired && ($value === null || $value === '')) {
+                error("Missing required option --{$key}. Declare a default with `# @option {$key}=value` or pass `--{$key}=...`.");
 
-                if ($cliPassed) {
-                    $value = $this->option($key);
-                } elseif ($envValue !== false && $envValue !== '') {
-                    $value = $envValue;
-                } else {
-                    $value = $option->default;
-                }
+                return null;
+            }
 
-                if ($option->isRequired && ($value === null || $value === '')) {
-                    error("Missing required option --{$key}. Declare a default with `# @option {$key}=value` or pass `--{$key}=...`.");
-
-                    return null;
-                }
-
-                if ($value === null) {
-                    continue;
-                }
+            if ($value === null) {
+                continue;
             }
 
             $camelCase = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $key))));
@@ -760,6 +752,27 @@ class RunCommand extends Command
         }
 
         return $data;
+    }
+
+    protected function resolveOptionValue(OptionDefinition $option, string $snakeCase): ?string
+    {
+        $key = $option->name;
+
+        if ($option->isBoolean) {
+            return $this->option($key) ? '1' : null;
+        }
+
+        if ($this->input->hasParameterOption(["--{$key}"], true)) {
+            return $this->option($key);
+        }
+
+        $envValue = getenv(strtoupper($snakeCase));
+
+        if ($envValue !== false && $envValue !== '') {
+            return $envValue;
+        }
+
+        return $option->default;
     }
 
     protected function showAvailableTargets(ParseResult $config): void

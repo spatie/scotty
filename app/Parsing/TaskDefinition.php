@@ -2,7 +2,7 @@
 
 namespace App\Parsing;
 
-class TaskDefinition
+final readonly class TaskDefinition
 {
     public function __construct(
         public string $name,
@@ -25,10 +25,10 @@ class TaskDefinition
 
     public function displayNameWithEmoji(): string
     {
-        if ($this->emoji !== null) {
-            return "{$this->emoji}  {$this->displayName()}";
+        if ($this->emoji === null) {
+            return $this->displayName();
         }
 
-        return $this->displayName();
+        return "{$this->emoji}  {$this->displayName()}";
     }
 }

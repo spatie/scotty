@@ -2,19 +2,22 @@
 
 namespace App\Parsing;
 
-class ServerDefinition
+final class ServerDefinition
 {
+    protected const LOCAL_HOSTS = ['127.0.0.1', 'localhost', 'local'];
+
     /** @var array<string> */
     public readonly array $hosts;
 
+    /**
+     * @param  string|array<string>  $host
+     */
     public function __construct(
-        public string $name,
+        public readonly string $name,
         string|array $host,
     ) {
         $this->hosts = is_array($host) ? array_values($host) : [$host];
     }
-
-    protected const LOCAL_HOSTS = ['127.0.0.1', 'localhost', 'local'];
 
     public function isLocal(): bool
     {

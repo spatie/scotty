@@ -116,6 +116,6 @@ class UpdateChecker
 
     protected function cacheFile(): string
     {
-        return $this->cacheDirectory.'/update-check';
+        return "{$this->cacheDirectory}/update-check";
     }
 }

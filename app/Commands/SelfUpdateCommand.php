@@ -38,10 +38,12 @@ class SelfUpdateCommand extends Command
 
         $newerVersion = $checker->findNewerVersion();
 
-        if ($newerVersion === null && ! $this->option('force')) {
-            info("You're already on the latest version ({$currentVersion}).");
+        if ($newerVersion === null) {
+            if (! $this->option('force')) {
+                info("You're already on the latest version ({$currentVersion}).");
 
-            return 0;
+                return 0;
+            }
         }
 
         $targetVersion = $newerVersion ?? $currentVersion;

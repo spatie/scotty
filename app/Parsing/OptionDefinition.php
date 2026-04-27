@@ -4,7 +4,7 @@ namespace App\Parsing;
 
 use InvalidArgumentException;
 
-class OptionDefinition
+final readonly class OptionDefinition
 {
     public function __construct(
         public string $name,
@@ -52,11 +52,12 @@ class OptionDefinition
         }
 
         $first = $value[0];
-        $last = substr($value, -1);
 
         if ($first !== '"' && $first !== "'") {
             return $value;
         }
+
+        $last = substr($value, -1);
 
         if ($first !== $last) {
             return $value;
