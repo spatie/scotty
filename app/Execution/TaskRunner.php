@@ -62,10 +62,12 @@ class TaskRunner
 
             if (count($server->hosts) === 1) {
                 $map[$serverName] = $server->hosts[0];
-            } else {
-                foreach ($server->hosts as $host) {
-                    $map[$host] = $host;
-                }
+
+                continue;
+            }
+
+            foreach ($server->hosts as $host) {
+                $map[$host] = $host;
             }
         }
 

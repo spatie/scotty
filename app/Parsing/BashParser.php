@@ -43,12 +43,14 @@ class BashParser implements ParserInterface
     {
         $servers = [];
 
-        if (preg_match('/^#\s*@servers\s+(.+)$/m', $content, $match)) {
-            preg_match_all('/(\w+)=(\S+)/', $match[1], $pairs, PREG_SET_ORDER);
+        if (! preg_match('/^#\s*@servers\s+(.+)$/m', $content, $match)) {
+            return $servers;
+        }
 
-            foreach ($pairs as $pair) {
-                $servers[$pair[1]] = new ServerDefinition($pair[1], $pair[2]);
-            }
+        preg_match_all('/(\w+)=(\S+)/', $match[1], $pairs, PREG_SET_ORDER);
+
+        foreach ($pairs as $pair) {
+            $servers[$pair[1]] = new ServerDefinition($pair[1], $pair[2]);
         }
 
         return $servers;
@@ -89,10 +91,7 @@ class BashParser implements ParserInterface
             $name = $match[1];
             $taskLines = explode("\n", trim($match[2]));
 
-            $tasks = array_map(function (string $line): string {
-                return trim(ltrim(trim($line), '#'));
-            }, $taskLines);
-
+            $tasks = array_map(fn (string $line): string => trim(ltrim(trim($line), '#')), $taskLines);
             $tasks = array_filter($tasks, fn (string $task) => $task !== '');
 
             $macros[$name] = new MacroDefinition($name, array_values($tasks));
@@ -114,16 +113,13 @@ class BashParser implements ParserInterface
             $bodyStart = $match[0][1] + strlen($match[0][0]);
 
             $script = $this->extractFunctionBody($content, $bodyStart);
-            $servers = $this->parseTaskServers($options);
-            $isParallel = str_contains($options, 'parallel');
-            $confirmMessage = $this->parseTaskConfirm($options);
 
             $tasks[$name] = new TaskDefinition(
                 name: $name,
                 script: $this->dedent($script),
-                servers: $servers,
-                parallel: $isParallel,
-                confirm: $confirmMessage,
+                servers: $this->parseTaskServers($options),
+                parallel: str_contains($options, 'parallel'),
+                confirm: $this->parseTaskConfirm($options),
                 emoji: $this->parseTaskEmoji($options),
             );
         }
@@ -139,16 +135,18 @@ class BashParser implements ParserInterface
         foreach (HookType::cases() as $hookType) {
             $pattern = "/^#\s*@{$hookType->value}\s*\$\n(\w+)\(\)\s*\{/m";
 
-            if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
-                foreach ($matches as $match) {
-                    $bodyStart = $match[0][1] + strlen($match[0][0]);
-                    $script = $this->extractFunctionBody($content, $bodyStart);
+            if (! preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
 
-                    $hooks[] = new HookDefinition(
-                        type: $hookType,
-                        script: $this->dedent($script),
-                    );
-                }
+            foreach ($matches as $match) {
+                $bodyStart = $match[0][1] + strlen($match[0][0]);
+                $script = $this->extractFunctionBody($content, $bodyStart);
+
+                $hooks[] = new HookDefinition(
+                    type: $hookType,
+                    script: $this->dedent($script),
+                );
             }
         }
 
@@ -166,11 +164,15 @@ class BashParser implements ParserInterface
                 break;
             }
 
-            if ($trimmed === '' || str_starts_with($trimmed, '#') || str_starts_with($trimmed, '#!/')) {
+            if ($trimmed === '') {
                 continue;
             }
 
-            if (preg_match('/^[A-Z_][A-Z0-9_]*=/', $trimmed) || preg_match('/^\w+\(\)\s*\{/', $trimmed)) {
+            if (str_starts_with($trimmed, '#')) {
+                continue;
+            }
+
+            if (preg_match('/^[A-Z_][A-Z0-9_]*=/', $trimmed)) {
                 $lines[] = $line;
             }
         }
@@ -179,11 +181,11 @@ class BashParser implements ParserInterface
 
         $preamble = implode("\n", $lines);
 
-        if ($helperFunctions !== '') {
-            $preamble .= "\n{$helperFunctions}";
+        if ($helperFunctions === '') {
+            return $preamble;
         }
 
-        return $preamble;
+        return "{$preamble}\n{$helperFunctions}";
     }
 
     protected function extractHelperFunctions(string $content): string
@@ -221,31 +223,23 @@ class BashParser implements ParserInterface
         $inDoubleQuote = false;
 
         while ($position < $length && $depth > 0) {
-            $char = $content[$position];
+            $character = $content[$position];
 
-            if ($char === '\\') {
-                if ($inSingleQuote || $inDoubleQuote) {
-                    $position += 2;
+            if ($character === '\\' && ($inSingleQuote || $inDoubleQuote)) {
+                $position += 2;
 
-                    continue;
-                }
+                continue;
             }
 
-            if ($char === "'") {
-                if (! $inDoubleQuote) {
-                    $inSingleQuote = ! $inSingleQuote;
-                }
-            } elseif ($char === '"') {
-                if (! $inSingleQuote) {
-                    $inDoubleQuote = ! $inDoubleQuote;
-                }
-            } elseif (! $inSingleQuote) {
-                if (! $inDoubleQuote) {
-                    if ($char === '{') {
-                        $depth++;
-                    } elseif ($char === '}') {
-                        $depth--;
-                    }
+            if ($character === "'" && ! $inDoubleQuote) {
+                $inSingleQuote = ! $inSingleQuote;
+            } elseif ($character === '"' && ! $inSingleQuote) {
+                $inDoubleQuote = ! $inDoubleQuote;
+            } elseif (! $inSingleQuote && ! $inDoubleQuote) {
+                if ($character === '{') {
+                    $depth++;
+                } elseif ($character === '}') {
+                    $depth--;
                 }
             }
 
@@ -260,29 +254,29 @@ class BashParser implements ParserInterface
     /** @return array<string> */
     protected function parseTaskServers(string $options): array
     {
-        if (preg_match('/on:(\S+)/', $options, $match)) {
-            return explode(',', $match[1]);
+        if (! preg_match('/on:(\S+)/', $options, $match)) {
+            return [];
         }
 
-        return [];
+        return explode(',', $match[1]);
     }
 
     protected function parseTaskConfirm(string $options): ?string
     {
-        if (preg_match('/confirm="([^"]+)"/', $options, $match)) {
-            return $match[1];
+        if (! preg_match('/confirm="([^"]+)"/', $options, $match)) {
+            return null;
         }
 
-        return null;
+        return $match[1];
     }
 
     protected function parseTaskEmoji(string $options): ?string
     {
-        if (preg_match('/emoji:(\S+)/', $options, $match)) {
-            return $match[1];
+        if (! preg_match('/emoji:(\S+)/', $options, $match)) {
+            return null;
         }
 
-        return null;
+        return $match[1];
     }
 
     protected function dedent(string $text): string

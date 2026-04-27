@@ -4,7 +4,7 @@ namespace App\Parsing;
 
 use RuntimeException;
 
-class ParseResult
+final readonly class ParseResult
 {
     public function __construct(
         /** @var array<string, ServerDefinition> */
@@ -49,37 +49,37 @@ class ParseResult
     {
         $macro = $this->getMacro($name);
 
-        if ($macro !== null) {
-            if (isset($visited[$name])) {
-                $cycle = implode(' -> ', [...array_keys($visited), $name]);
+        if ($macro === null) {
+            $task = $this->getTask($name);
 
-                throw new RuntimeException("Macro \"{$name}\" forms a cycle: {$cycle}");
+            if ($task === null) {
+                return [];
             }
 
-            $visited[$name] = true;
-
-            $tasks = [];
-
-            foreach ($macro->tasks as $childName) {
-                if (! isset($this->macros[$childName]) && ! isset($this->tasks[$childName])) {
-                    throw new RuntimeException(
-                        "Macro \"{$name}\" references unknown target \"{$childName}\"."
-                    );
-                }
-
-                $tasks[] = $this->resolveTasksForTargetRecursive($childName, $visited);
-            }
-
-            return array_merge([], ...$tasks);
-        }
-
-        $task = $this->getTask($name);
-
-        if ($task !== null) {
             return [$task];
         }
 
-        return [];
+        if (isset($visited[$name])) {
+            $cycle = implode(' -> ', [...array_keys($visited), $name]);
+
+            throw new RuntimeException("Macro \"{$name}\" forms a cycle: {$cycle}");
+        }
+
+        $visited[$name] = true;
+
+        $tasks = [];
+
+        foreach ($macro->tasks as $childName) {
+            if (! isset($this->macros[$childName]) && ! isset($this->tasks[$childName])) {
+                throw new RuntimeException(
+                    "Macro \"{$name}\" references unknown target \"{$childName}\"."
+                );
+            }
+
+            $tasks[] = $this->resolveTasksForTargetRecursive($childName, $visited);
+        }
+
+        return array_merge([], ...$tasks);
     }
 
     /** @return array<HookDefinition> */

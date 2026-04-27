@@ -100,8 +100,6 @@ class BladeParser implements ParserInterface
     /** @return array<HookDefinition> */
     protected function buildHooks(TaskContainer $container): array
     {
-        $hooks = [];
-
         $hookMapping = [
             [HookType::Before, $container->getBeforeCallbacks()],
             [HookType::After, $container->getAfterCallbacks()],
@@ -109,6 +107,8 @@ class BladeParser implements ParserInterface
             [HookType::Error, $container->getErrorCallbacks()],
             [HookType::Finished, $container->getFinishedCallbacks()],
         ];
+
+        $hooks = [];
 
         foreach ($hookMapping as [$type, $callbacks]) {
             foreach ($callbacks as $callback) {

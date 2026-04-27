@@ -68,16 +68,12 @@ class SshConfigFile
     /** @param array<string, string> $group */
     protected function groupMatchesHostname(array $group, string $hostname): bool
     {
-        if (isset($group['host'])) {
-            if ($group['host'] === $hostname) {
-                return true;
-            }
+        if (($group['host'] ?? null) === $hostname) {
+            return true;
         }
 
-        if (isset($group['hostname'])) {
-            if ($group['hostname'] === $hostname) {
-                return true;
-            }
+        if (($group['hostname'] ?? null) === $hostname) {
+            return true;
         }
 
         return false;

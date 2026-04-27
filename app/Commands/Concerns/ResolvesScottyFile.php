@@ -24,7 +24,9 @@ trait ResolvesScottyFile
 
     protected function resolveFilePath(): ?string
     {
-        if ($path = $this->option('path')) {
+        $path = $this->option('path');
+
+        if ($path) {
             return file_exists($path) ? $path : null;
         }
 

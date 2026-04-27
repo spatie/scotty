@@ -78,11 +78,6 @@ class Compiler
 
     protected function compileEchos(string $value): string
     {
-        return $this->compileRegularEchos($value);
-    }
-
-    protected function compileRegularEchos(string $value): string
-    {
         $pattern = sprintf('/(@)?%s\s*(.+?)\s*%s(\r?\n)?/s', '{{', '}}');
 
         $callback = function (array $matches): string {

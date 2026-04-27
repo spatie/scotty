@@ -59,6 +59,7 @@ class TaskContainer
         $this->load($path, $compiler, [], __serversOnly: true);
     }
 
+    /** @param array<string, mixed> $__data */
     public function load(string $__path, Compiler $__compiler, array $__data = [], bool $__serversOnly = false): void
     {
         $__envoyPath = $this->writeCompiledEnvoyFile($__compiler, $__path, $__serversOnly);

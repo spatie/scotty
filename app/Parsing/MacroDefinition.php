@@ -2,7 +2,7 @@
 
 namespace App\Parsing;
 
-class MacroDefinition
+final readonly class MacroDefinition
 {
     public function __construct(
         public string $name,

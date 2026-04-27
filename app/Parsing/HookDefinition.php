@@ -2,7 +2,7 @@
 
 namespace App\Parsing;
 
-class HookDefinition
+final readonly class HookDefinition
 {
     public function __construct(
         public HookType $type,

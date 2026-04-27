@@ -154,6 +154,7 @@ class Executor
         return $result;
     }
 
+    /** @param array<string, string> $env */
     protected function pretendTask(TaskDefinition $task, ParseResult $config, array $env): TaskResult
     {
         $commandBuilder = $this->taskRunner->getCommandBuilder();

@@ -40,7 +40,7 @@ class SelfUpdater
             return UpdateResult::failed('Downloaded phar is suspiciously small, refusing to replace.');
         }
 
-        $tempPath = $pharPath.'.new';
+        $tempPath = "{$pharPath}.new";
 
         if (@file_put_contents($tempPath, $contents) === false) {
             return UpdateResult::failed("Failed to write temporary file at {$tempPath}.");
