@@ -2,6 +2,8 @@
 
 namespace App\Parsing;
 
+use RuntimeException;
+
 class ParseResult
 {
     public function __construct(
@@ -34,13 +36,37 @@ class ParseResult
     /** @return array<TaskDefinition> */
     public function resolveTasksForTarget(string $name): array
     {
+        return $this->resolveTasksForTargetRecursive($name, []);
+    }
+
+    /**
+     * @param  array<string, true>  $visited  macro names already on the resolution stack
+     * @return array<TaskDefinition>
+     */
+    protected function resolveTasksForTargetRecursive(string $name, array $visited): array
+    {
         $macro = $this->getMacro($name);
 
         if ($macro !== null) {
-            $tasks = array_map(
-                fn (string $taskName) => $this->resolveTasksForTarget($taskName),
-                $macro->tasks
-            );
+            if (isset($visited[$name])) {
+                $cycle = implode(' -> ', [...array_keys($visited), $name]);
+
+                throw new RuntimeException("Macro \"{$name}\" forms a cycle: {$cycle}");
+            }
+
+            $visited[$name] = true;
+
+            $tasks = [];
+
+            foreach ($macro->tasks as $childName) {
+                if (! isset($this->macros[$childName]) && ! isset($this->tasks[$childName])) {
+                    throw new RuntimeException(
+                        "Macro \"{$name}\" references unknown target \"{$childName}\"."
+                    );
+                }
+
+                $tasks[] = $this->resolveTasksForTargetRecursive($childName, $visited);
+            }
 
             return array_merge([], ...$tasks);
         }

@@ -106,6 +106,33 @@ it('resolves tasks for unknown name to empty array', function () {
     expect($result->resolveTasksForTarget('nonexistent'))->toBeEmpty();
 });
 
+it('throws when a macro references an unknown task or macro', function () {
+    $result = new ParseResult(
+        tasks: [
+            'pull' => new TaskDefinition('pull', 'echo pull', ['local']),
+        ],
+        macros: [
+            'deploy' => new MacroDefinition('deploy', ['pull', 'pull-typo']),
+        ],
+    );
+
+    $result->resolveTasksForTarget('deploy');
+})->throws(RuntimeException::class, 'Macro "deploy" references unknown target "pull-typo".');
+
+it('detects cyclic macros', function () {
+    $result = new ParseResult(
+        tasks: [
+            'pull' => new TaskDefinition('pull', 'echo pull', ['local']),
+        ],
+        macros: [
+            'a' => new MacroDefinition('a', ['pull', 'b']),
+            'b' => new MacroDefinition('b', ['a']),
+        ],
+    );
+
+    $result->resolveTasksForTarget('a');
+})->throws(RuntimeException::class, 'forms a cycle: a -> b -> a');
+
 it('filters hooks by type', function () {
     $result = createParseResult();
 
