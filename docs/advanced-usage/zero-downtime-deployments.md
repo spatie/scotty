@@ -44,6 +44,8 @@ Create a `Scotty.sh` file in your project root. We'll start with some variables:
 
 # @servers local=127.0.0.1 remote=deployer@your-server.com
 
+# @option branch=main
+
 BASE_DIR="/var/www/my-app"
 RELEASES_DIR="$BASE_DIR/releases"
 PERSISTENT_DIR="$BASE_DIR/persistent"
@@ -51,7 +53,6 @@ CURRENT_DIR="$BASE_DIR/current"
 NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 NEW_RELEASE_DIR="$RELEASES_DIR/$NEW_RELEASE_NAME"
 REPOSITORY="your-org/your-repo"
-BRANCH="${BRANCH:-main}"
 ```
 
 Replace `deployer@your-server.com` with your actual server, and `your-org/your-repo` with your GitHub repository. The release name is a timestamp, so every deploy gets its own unique directory. `BRANCH` defaults to `main`, but you can override it later with `scotty run deploy --branch=develop`.
@@ -215,6 +216,8 @@ Here's everything in one file, ready to copy into your project:
 # @servers local=127.0.0.1 remote=deployer@your-server.com
 # @macro deploy startDeployment cloneRepository runComposer buildAssets updateSymlinks migrateDatabase blessNewRelease cleanOldReleases
 
+# @option branch=main
+
 BASE_DIR="/var/www/my-app"
 RELEASES_DIR="$BASE_DIR/releases"
 PERSISTENT_DIR="$BASE_DIR/persistent"
@@ -222,7 +225,6 @@ CURRENT_DIR="$BASE_DIR/current"
 NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 NEW_RELEASE_DIR="$RELEASES_DIR/$NEW_RELEASE_NAME"
 REPOSITORY="your-org/your-repo"
-BRANCH="${BRANCH:-main}"
 
 # @task on:local
 startDeployment() {

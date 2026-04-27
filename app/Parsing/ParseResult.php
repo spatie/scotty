@@ -16,6 +16,8 @@ class ParseResult
         /** @var array<HookDefinition> */
         public array $hooks = [],
         public string $variablePreamble = '',
+        /** @var array<string, OptionDefinition> */
+        public array $options = [],
     ) {}
 
     public function getTask(string $name): ?TaskDefinition

@@ -48,15 +48,40 @@ This hides task output and only shows results. Failed tasks always show their ou
 
 ## Dynamic options
 
-You can pass custom variables from the command line:
+Declare every option you want to accept at the top of your Scotty.sh file with `# @option`. There are three forms:
 
 ```bash
-scotty run deploy --branch=develop
+# @option staging          # boolean flag: $STAGING='1' when --staging is passed, unset otherwise
+# @option branch=main      # optional value with a default: $BRANCH='main' unless overridden
+# @option tag=             # required value: scotty errors if --tag=... isn't passed
 ```
 
-In the Scotty.sh format, `--branch=develop` becomes `$BRANCH`. The key is uppercased and dashes become underscores.
+```bash
+scotty run deploy --branch=develop --tag=v1.2 --staging
+```
 
-In the Blade format, it becomes available as `$branch`.
+### Naming
+
+An option named `branch` is exposed to your tasks as `$BRANCH`. The same rule applies to the CLI flag, the environment variable Scotty looks up, and the assignment written into the script preamble: each option has exactly **one** canonical bash name.
+
+The transformation is:
+
+- Dashes become underscores (`release-name` → `release_name`)
+- The result is uppercased (`release_name` → `RELEASE_NAME`)
+
+So `# @option release-name=latest` declares a CLI flag `--release-name=...`, an env var `$RELEASE_NAME`, and a script variable `$RELEASE_NAME` — all one and the same. Flags that aren't declared are rejected with `The "--foo" option does not exist.`
+
+### Precedence
+
+For value options, Scotty resolves each variable in this order:
+
+1. CLI flag (`--branch=develop` or `--release-name=v42`)
+2. Environment variable of the canonical bash name (`BRANCH=develop scotty run deploy`, `RELEASE_NAME=v42 scotty run deploy`)
+3. Declared default (`# @option branch=main`)
+
+Boolean flags only read from the CLI — `$STAGING` is unset unless `--staging` was passed on this invocation.
+
+> Note: `@option` declarations are currently supported in the Scotty.sh (bash) format. Blade-format files ignore `@option` and continue to forward any passed CLI flag as a Blade variable.
 
 ## Pause and resume
 

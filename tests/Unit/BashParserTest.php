@@ -281,25 +281,6 @@ BASH);
     @unlink($fixture);
 });
 
-it('adds cli data to variable preamble', function () {
-    $fixture = $this->fixturePath.'/simple.sh';
-    file_put_contents($fixture, <<<'BASH'
-# @servers local=127.0.0.1
-
-# @task on:local
-deploy() {
-    echo "deploying $BRANCH"
-}
-BASH);
-
-    $result = $this->parser->parse($fixture, ['branch' => 'main', 'env' => 'production']);
-
-    expect($result->variablePreamble)->toContain("BRANCH='main'")
-        ->and($result->variablePreamble)->toContain("ENV='production'");
-
-    @unlink($fixture);
-});
-
 it('parses emoji from task annotation', function () {
     $fixture = $this->fixturePath.'/emoji.sh';
     file_put_contents($fixture, <<<'BASH'
@@ -320,6 +301,39 @@ BASH);
 
     expect($result->getTask('deploy')->emoji)->toBe('🚀')
         ->and($result->getTask('noEmoji')->emoji)->toBeNull();
+
+    @unlink($fixture);
+});
+
+it('parses @option declarations in all three forms', function () {
+    $fixture = $this->fixturePath.'/options.sh';
+    file_put_contents($fixture, <<<'BASH'
+# @servers local=127.0.0.1
+
+# @option staging
+# @option branch=main
+# @option env="production"
+# @option tag=
+
+# @task on:local
+deploy() {
+    echo "deploying"
+}
+BASH);
+
+    $result = $this->parser->parse($fixture);
+
+    expect($result->options)->toHaveCount(4)
+        ->and($result->options['staging']->isBoolean)->toBeTrue()
+        ->and($result->options['staging']->isRequired)->toBeFalse()
+        ->and($result->options['staging']->default)->toBeNull()
+        ->and($result->options['branch']->isBoolean)->toBeFalse()
+        ->and($result->options['branch']->isRequired)->toBeFalse()
+        ->and($result->options['branch']->default)->toBe('main')
+        ->and($result->options['env']->default)->toBe('production')
+        ->and($result->options['tag']->isBoolean)->toBeFalse()
+        ->and($result->options['tag']->isRequired)->toBeTrue()
+        ->and($result->options['tag']->default)->toBeNull();
 
     @unlink($fixture);
 });

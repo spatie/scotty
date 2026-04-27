@@ -116,10 +116,10 @@ Sometimes you want to deploy a different branch. Instead of editing the file eac
 scotty run deploy --branch=develop
 ```
 
-Command line options are available as uppercased variables. Use a default so it works without the flag too:
+Declare the option with `# @option` so Scotty knows to accept it. The value after `=` is the default used when the flag is omitted:
 
 ```bash
-BRANCH="${BRANCH:-main}"
+# @option branch=main
 
 # @task on:remote
 pullCode() {
@@ -152,8 +152,9 @@ Here's everything together:
 # @servers remote=deployer@your-server.com
 # @macro deploy pullCode runComposer runMigrations clearCaches restartWorkers
 
+# @option branch=main
+
 APP_DIR="/var/www/my-app"
-BRANCH="${BRANCH:-main}"
 
 # @task on:remote confirm="Deploy to production?"
 pullCode() {

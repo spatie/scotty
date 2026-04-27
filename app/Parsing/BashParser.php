@@ -13,8 +13,56 @@ class BashParser implements ParserInterface
             tasks: $this->parseTasks($content),
             macros: $this->parseMacros($content),
             hooks: $this->parseHooks($content),
-            variablePreamble: $this->parseVariables($content, $data),
+            variablePreamble: $this->parseVariables($content),
+            options: $this->parseOptions($content),
         );
+    }
+
+    /** @return array<string, OptionDefinition> */
+    protected function parseOptions(string $content): array
+    {
+        $options = [];
+
+        preg_match_all(
+            '/^#\s*@option\s+([a-zA-Z][\w-]*)(=(.*))?\s*$/m',
+            $content,
+            $matches,
+            PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL,
+        );
+
+        foreach ($matches as $match) {
+            $name = $match[1];
+            $hasEquals = $match[2] !== null;
+
+            if (! $hasEquals) {
+                $options[$name] = new OptionDefinition(
+                    name: $name,
+                    isBoolean: true,
+                    isRequired: false,
+                    default: null,
+                );
+
+                continue;
+            }
+
+            $value = trim($match[3] ?? '');
+
+            if (strlen($value) >= 2 && (
+                ($value[0] === '"' && substr($value, -1) === '"') ||
+                ($value[0] === "'" && substr($value, -1) === "'")
+            )) {
+                $value = substr($value, 1, -1);
+            }
+
+            $options[$name] = new OptionDefinition(
+                name: $name,
+                isBoolean: false,
+                isRequired: $value === '',
+                default: $value === '' ? null : $value,
+            );
+        }
+
+        return $options;
     }
 
     /** @return array<string, ServerDefinition> */
@@ -134,7 +182,7 @@ class BashParser implements ParserInterface
         return $hooks;
     }
 
-    protected function parseVariables(string $content, array $cliData): string
+    protected function parseVariables(string $content): string
     {
         $lines = [];
 
@@ -155,12 +203,6 @@ class BashParser implements ParserInterface
         }
 
         $helperFunctions = $this->extractHelperFunctions($content);
-
-        foreach ($cliData as $key => $value) {
-            $escapedValue = escapeshellarg($value);
-            $upperKey = strtoupper($key);
-            $lines[] = "{$upperKey}={$escapedValue}";
-        }
 
         $preamble = implode("\n", $lines);
 

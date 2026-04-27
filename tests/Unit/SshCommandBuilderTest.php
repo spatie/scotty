@@ -75,6 +75,21 @@ it('includes environment variable exports in remote command', function () {
         ->and($command)->toContain('export BRANCH="main"');
 });
 
+it('normalises lowercase and dashed env keys to uppercase snake_case, deduping variants', function () {
+    $command = $this->builder->buildCommand('forge@1.1.1.1', 'echo "hello"', [
+        'branch' => 'develop',
+        'Branch' => 'develop',
+        'release-name' => 'v42',
+        'release_name' => 'v42',
+        'releaseName' => 'v42',
+    ]);
+
+    expect(substr_count($command, 'export BRANCH="develop"'))->toBe(1)
+        ->and(substr_count($command, 'export RELEASE_NAME="v42"'))->toBe(1)
+        ->and($command)->not->toContain('export branch=')
+        ->and($command)->not->toContain('export release-name=');
+});
+
 it('includes set -e in remote command', function () {
     $command = $this->builder->buildCommand('forge@1.1.1.1', 'echo "hello"');
 

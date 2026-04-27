@@ -112,13 +112,19 @@ NEW_RELEASE_NAME=$(date +%Y%m%d-%H%M%S)
 
 These are plain bash variables, so computed values like `$(date)` work naturally. All variables are available in all tasks.
 
-You can also pass variables from the command line:
+You can also accept variables from the command line by declaring them with `# @option`. Three forms are supported:
 
 ```bash
-scotty run deploy --branch=develop
+# @option staging          # boolean flag — $STAGING='1' when --staging is passed
+# @option branch=main      # value with default — $BRANCH='main' unless overridden
+# @option release-name=    # required value — scotty errors if --release-name=... is missing
 ```
 
-The key gets uppercased and dashes become underscores, so `--branch=develop` sets `$BRANCH` to `develop`.
+```bash
+scotty run deploy --branch=develop --release-name=v42 --staging
+```
+
+The key gets uppercased and dashes become underscores, so `--release-name=v42` sets `$RELEASE_NAME`. Value options also fall back to an environment variable of the same (uppercased) name before using the declared default. See [Dynamic options](/docs/scotty/v1/basic-usage/running-tasks#dynamic-options) for the full precedence rules.
 
 ## Helper functions
 

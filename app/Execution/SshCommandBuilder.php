@@ -59,11 +59,21 @@ class SshCommandBuilder
         $delimiter = 'EOF-SCOTTY';
 
         $exports = [];
+        $seen = [];
 
         foreach ($env as $key => $value) {
-            if ($value !== '') {
-                $exports[] = "export {$key}=\"{$value}\"";
+            if ($value === '') {
+                continue;
             }
+
+            $upperKey = strtoupper(str_replace('-', '_', $key));
+
+            if (isset($seen[$upperKey])) {
+                continue;
+            }
+
+            $seen[$upperKey] = true;
+            $exports[] = "export {$upperKey}=\"{$value}\"";
         }
 
         $parts = [
