@@ -50,11 +50,15 @@ class SelfUpdateCommand extends Command
 
         info("Updating Scotty from {$currentVersion} to {$targetVersion}...");
 
-        $result = (new SelfUpdater)->update($targetVersion, $pharPath);
+        $result = (new SelfUpdater)->update(
+            $targetVersion,
+            $pharPath,
+            beforeCommit: function () use ($targetVersion): void {
+                info("Successfully updated to {$targetVersion}.");
+            },
+        );
 
         if ($result->succeeded) {
-            info("Updated to {$targetVersion}.");
-
             return 0;
         }
 

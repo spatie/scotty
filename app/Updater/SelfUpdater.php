@@ -18,7 +18,10 @@ class SelfUpdater
         $this->downloader = $downloader ?? fn (string $url): ?string => $this->defaultDownloader($url);
     }
 
-    public function update(string $version, string $pharPath): UpdateResult
+    /**
+     * @param  ?callable(): void  $beforeCommit  Invoked once the new phar is on disk and validated, immediately before it replaces the running phar. Use this to flush user-facing messages while the running phar is still intact.
+     */
+    public function update(string $version, string $pharPath, ?callable $beforeCommit = null): UpdateResult
     {
         if (! is_writable(dirname($pharPath))) {
             return UpdateResult::failed("Cannot write to {$pharPath}. Re-run with sudo.");
@@ -47,6 +50,10 @@ class SelfUpdater
         }
 
         @chmod($tempPath, 0755);
+
+        if ($beforeCommit !== null) {
+            $beforeCommit();
+        }
 
         if (! @rename($tempPath, $pharPath)) {
             @unlink($tempPath);
