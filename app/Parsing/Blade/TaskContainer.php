@@ -2,6 +2,7 @@
 
 namespace App\Parsing\Blade;
 
+use App\Parsing\OptionDefinition;
 use Closure;
 use Exception;
 use InvalidArgumentException;
@@ -49,6 +50,9 @@ class TaskContainer
 
     /** @var array<string, array<string, mixed>> */
     protected array $macroOptions = [];
+
+    /** @var array<string, OptionDefinition> */
+    protected array $declaredOptions = [];
 
     public function loadServers(string $path, Compiler $compiler): void
     {
@@ -188,6 +192,19 @@ class TaskContainer
     public function share(string $key, mixed $value): void
     {
         $this->sharedData[$key] = $value;
+    }
+
+    public function declareOption(string $signature): void
+    {
+        $option = OptionDefinition::parse($signature);
+
+        $this->declaredOptions[$option->name] = $option;
+    }
+
+    /** @return array<string, OptionDefinition> */
+    public function getDeclaredOptions(): array
+    {
+        return $this->declaredOptions;
     }
 
     /** @return array<string, array<string>> */

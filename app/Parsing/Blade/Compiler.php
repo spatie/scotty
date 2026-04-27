@@ -24,6 +24,7 @@ class Compiler
         'SetupStop',
         'Include',
         'Servers',
+        'Option',
         'MacroStart',
         'MacroStop',
         'TaskStart',
@@ -168,6 +169,13 @@ class Compiler
         $pattern = $this->createMatcher('servers');
 
         return preg_replace($pattern, '$1<?php $__container->servers$2; ?>', $value);
+    }
+
+    protected function compileOption(string $value): string
+    {
+        $pattern = $this->createMatcher('option');
+
+        return preg_replace($pattern, '$1<?php $__container->declareOption$2; ?>', $value);
     }
 
     protected function compileMacroStart(string $value): string

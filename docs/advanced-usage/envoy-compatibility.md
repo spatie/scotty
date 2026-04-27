@@ -99,13 +99,27 @@ To require other PHP files, use `@include` at the top of your file:
 
 ## Variables
 
-You can pass arguments from the command line:
+Declare CLI options with `@option` at the top of your file. The same three forms supported in the [Scotty.sh format](/docs/scotty/v1/basic-usage/running-tasks#dynamic-options) work here:
 
-```bash
-scotty run deploy --branch=master
+```blade
+@option('staging')
+@option('branch=main')
+@option('tag=')
 ```
 
-Access them in your tasks using Blade's echo syntax:
+| Form | Behaviour |
+|---|---|
+| `@option('staging')` | Boolean flag. `$staging` is `'1'` when `--staging` is passed, otherwise `null`. |
+| `@option('branch=main')` | Optional value with a default. Uses `--branch=...`, the `BRANCH` env var, then `'main'`. |
+| `@option('tag=')` | Required value. Errors if `--tag=...` is not provided. |
+
+Pass values from the command line:
+
+```bash
+scotty run deploy --branch=develop
+```
+
+Access them in tasks using Blade's echo syntax:
 
 ```blade
 @task('deploy', ['on' => 'web'])
@@ -118,6 +132,10 @@ Access them in your tasks using Blade's echo syntax:
     php artisan migrate --force
 @endtask
 ```
+
+Dashed names like `@option('release-name')` are exposed as both `$release_name` and `$releaseName`.
+
+Undeclared flags (e.g. `--branch=develop` without a matching `@option('branch=...')`) are rejected by the CLI.
 
 ## Stories (macros)
 

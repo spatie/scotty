@@ -5,7 +5,6 @@ namespace App\Commands;
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Execution\Executor;
 use App\Execution\TaskResult;
-use App\Parsing\BashParser;
 use App\Parsing\OptionDefinition;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
@@ -73,9 +72,10 @@ class RunCommand extends Command
 
     protected ?int $cachedTerminalWidth = null;
 
-    protected ?ParseResult $preloadedConfig = null;
-
     protected ?string $preloadedFilePath = null;
+
+    /** @var array<string, OptionDefinition> */
+    protected array $declaredOptions = [];
 
     public function run(InputInterface $input, OutputInterface $output): int
     {
@@ -92,18 +92,13 @@ class RunCommand extends Command
             return 1;
         }
 
-        $parser = $this->resolveParser($filePath);
-        $config = $this->preloadedConfig ?? $parser->parse($filePath);
-
-        $dynamicOptions = $this->resolveDeclaredOptions($config->options);
+        $dynamicOptions = $this->resolveDeclaredOptions($this->declaredOptions);
 
         if ($dynamicOptions === null) {
             return 1;
         }
 
-        if ($this->preloadedConfig === null) {
-            $config = $parser->parse($filePath, $dynamicOptions);
-        }
+        $config = $this->resolveParser($filePath)->parse($filePath, $dynamicOptions);
 
         $target = $this->argument('task');
         $tasks = $config->resolveTasksForTarget($target);
@@ -582,55 +577,55 @@ class RunCommand extends Command
     }
 
     /**
-     * Preload the Scotty file so its @option declarations can be registered as
-     * real Symfony options before input binding/validation.
-     *
-     * Only the BashParser is preloaded here; Blade-format Scotty files go
-     * through the standard parse path in handle() and don't yet participate
-     * in declaration-based CLI options.
+     * Register @option declarations as Symfony options before input binding,
+     * so undeclared flags get rejected by normal validation and declared ones
+     * type-check naturally.
      */
     protected function registerDeclaredOptions(InputInterface $input): void
     {
-        $confOpt = $input->getParameterOption(['--conf'], null, true);
-        $pathOpt = $input->getParameterOption(['--path'], null, true);
-
-        $filePath = null;
-
-        if (is_string($pathOpt) && file_exists($pathOpt)) {
-            $filePath = $pathOpt;
-        } elseif (is_string($confOpt) && file_exists($confOpt)) {
-            $filePath = $confOpt;
-        } else {
-            foreach (self::SCOTTY_FILENAMES as $candidate) {
-                if (file_exists($candidate)) {
-                    $filePath = $candidate;
-                    break;
-                }
-            }
-        }
+        $filePath = $this->resolveFilePathFromInput($input);
 
         if ($filePath === null) {
             return;
         }
 
-        $parser = $this->resolveParser($filePath);
+        $declared = $this->resolveParser($filePath)->extractDeclaredOptions($filePath);
 
-        if (! $parser instanceof BashParser) {
-            return;
-        }
-
-        $config = $parser->parse($filePath);
-
-        foreach ($config->options as $option) {
+        foreach ($declared as $option) {
             if ($option->isBoolean) {
                 $this->addOption($option->name, null, InputOption::VALUE_NONE, '');
-            } else {
-                $this->addOption($option->name, null, InputOption::VALUE_REQUIRED, '', $option->default);
+
+                continue;
+            }
+
+            $this->addOption($option->name, null, InputOption::VALUE_REQUIRED, '', $option->default);
+        }
+
+        $this->declaredOptions = $declared;
+        $this->preloadedFilePath = $filePath;
+    }
+
+    protected function resolveFilePathFromInput(InputInterface $input): ?string
+    {
+        $pathOpt = $input->getParameterOption(['--path'], null, true);
+
+        if (is_string($pathOpt) && file_exists($pathOpt)) {
+            return $pathOpt;
+        }
+
+        $confOpt = $input->getParameterOption(['--conf'], null, true);
+
+        if (is_string($confOpt) && file_exists($confOpt)) {
+            return $confOpt;
+        }
+
+        foreach (self::SCOTTY_FILENAMES as $candidate) {
+            if (file_exists($candidate)) {
+                return $candidate;
             }
         }
 
-        $this->preloadedConfig = $config;
-        $this->preloadedFilePath = $filePath;
+        return null;
     }
 
     /**

@@ -18,48 +18,21 @@ class BashParser implements ParserInterface
         );
     }
 
+    public function extractDeclaredOptions(string $filePath): array
+    {
+        return $this->parseOptions(file_get_contents($filePath));
+    }
+
     /** @return array<string, OptionDefinition> */
     protected function parseOptions(string $content): array
     {
         $options = [];
 
-        preg_match_all(
-            '/^#\s*@option\s+([a-zA-Z][\w-]*)(=(.*))?\s*$/m',
-            $content,
-            $matches,
-            PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL,
-        );
+        preg_match_all('/^#\s*@option\s+(\S.*?)\s*$/m', $content, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
-            $name = $match[1];
-            $hasEquals = $match[2] !== null;
-
-            if (! $hasEquals) {
-                $options[$name] = new OptionDefinition(
-                    name: $name,
-                    isBoolean: true,
-                    isRequired: false,
-                    default: null,
-                );
-
-                continue;
-            }
-
-            $value = trim($match[3] ?? '');
-
-            if (strlen($value) >= 2 && (
-                ($value[0] === '"' && substr($value, -1) === '"') ||
-                ($value[0] === "'" && substr($value, -1) === "'")
-            )) {
-                $value = substr($value, 1, -1);
-            }
-
-            $options[$name] = new OptionDefinition(
-                name: $name,
-                isBoolean: false,
-                isRequired: $value === '',
-                default: $value === '' ? null : $value,
-            );
+            $option = OptionDefinition::parse($match[1]);
+            $options[$option->name] = $option;
         }
 
         return $options;

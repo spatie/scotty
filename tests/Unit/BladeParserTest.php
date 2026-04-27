@@ -7,6 +7,30 @@ beforeEach(function () {
     $this->fixturePath = __DIR__.'/../fixtures';
 });
 
+it('parses @option declarations in all three forms', function () {
+    $result = $this->parser->parse($this->fixturePath.'/blade-with-options.blade.php');
+
+    expect($result->options)->toHaveCount(3)
+        ->and($result->options['staging']->isBoolean)->toBeTrue()
+        ->and($result->options['staging']->isRequired)->toBeFalse()
+        ->and($result->options['staging']->default)->toBeNull()
+        ->and($result->options['branch']->isBoolean)->toBeFalse()
+        ->and($result->options['branch']->isRequired)->toBeFalse()
+        ->and($result->options['branch']->default)->toBe('main')
+        ->and($result->options['tag']->isBoolean)->toBeFalse()
+        ->and($result->options['tag']->isRequired)->toBeTrue()
+        ->and($result->options['tag']->default)->toBeNull();
+});
+
+it('exposes blade @option values as variables in task bodies', function () {
+    $result = $this->parser->parse(
+        $this->fixturePath.'/blade-with-options.blade.php',
+        ['branch' => 'develop'],
+    );
+
+    expect($result->getTask('deploy')->script)->toContain('branch=develop');
+});
+
 it('parses emoji from blade task options', function () {
     $result = $this->parser->parse($this->fixturePath.'/blade-with-emoji.blade.php');
 

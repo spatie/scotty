@@ -21,11 +21,31 @@ class BladeParser implements ParserInterface
             tasks: $this->buildTasks($container),
             macros: $this->buildMacros($container),
             hooks: $this->buildHooks($container),
+            options: $container->getDeclaredOptions(),
         );
 
         $container->cleanup();
 
         return $result;
+    }
+
+    public function extractDeclaredOptions(string $filePath): array
+    {
+        $options = [];
+
+        preg_match_all(
+            '/(?<!\w)@option\s*\(\s*([\'"])(.+?)\1\s*\)/',
+            file_get_contents($filePath),
+            $matches,
+            PREG_SET_ORDER,
+        );
+
+        foreach ($matches as $match) {
+            $option = OptionDefinition::parse($match[2]);
+            $options[$option->name] = $option;
+        }
+
+        return $options;
     }
 
     /** @return array<string, ServerDefinition> */
