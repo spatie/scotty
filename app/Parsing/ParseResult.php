@@ -37,7 +37,12 @@ class ParseResult
         $macro = $this->getMacro($name);
 
         if ($macro !== null) {
-            return array_map(fn (string $taskName) => $this->tasks[$taskName], $macro->tasks);
+            $tasks = array_map(
+                fn (string $taskName) => $this->resolveTasksForTarget($taskName),
+                $macro->tasks
+            );
+
+            return array_merge([], ...$tasks);
         }
 
         $task = $this->getTask($name);
