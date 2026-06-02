@@ -9,7 +9,7 @@
 <h1>Scotty: a beautiful SSH task runner</h1>
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/spatie/scotty.svg?style=flat-square)](https://packagist.org/packages/spatie/scotty)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/spatie/scotty/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/spatie/scotty/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Tests Action Status](https://github.com/spatie/scotty/actions/workflows/run-tests.yml/badge.svg)](https://github.com/spatie/scotty/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/spatie/scotty.svg?style=flat-square)](https://packagist.org/packages/spatie/scotty)
 
 </div>
