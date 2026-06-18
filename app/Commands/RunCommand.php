@@ -15,6 +15,8 @@ use DateTime;
 use DateTimeZone;
 use LaravelZero\Framework\Commands\Command;
 use Phar;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -773,6 +775,19 @@ class RunCommand extends Command
         }
 
         return $option->default;
+    }
+
+    /**
+     * Provide shell completion for the `task` argument by suggesting the
+     * tasks and macros declared in the resolved Scotty file.
+     */
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        $this->completeArgument($input, $suggestions, 'task', function (ParseResult $config): array {
+            $targets = $config->availableTargets();
+
+            return [...$targets['tasks'], ...$targets['macros']];
+        });
     }
 
     protected function showAvailableTargets(ParseResult $config): void

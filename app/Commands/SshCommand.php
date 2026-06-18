@@ -6,6 +6,8 @@ use App\Commands\Concerns\ResolvesScottyFile;
 use App\Parsing\ParseResult;
 use App\Parsing\ServerDefinition;
 use LaravelZero\Framework\Commands\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\select;
@@ -52,6 +54,17 @@ class SshCommand extends Command
         passthru("ssh {$host}");
 
         return 0;
+    }
+
+    /**
+     * Provide shell completion for the `name` argument by suggesting the
+     * remote servers declared in the resolved Scotty file.
+     */
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        $this->completeArgument($input, $suggestions, 'name', fn (ParseResult $config): array => array_keys(
+            array_filter($config->servers, fn (ServerDefinition $server) => ! $server->isLocal()),
+        ));
     }
 
     /**

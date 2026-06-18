@@ -66,6 +66,17 @@ composer global require spatie/scotty
 
 See the [installation docs](https://spatie.be/docs/scotty/v1/installation-setup) for details and other options.
 
+## Shell completion
+
+Scotty has tab completion for command names, the `run` task/macro argument, and the `ssh` server argument. The first time you run Scotty in an interactive terminal it detects your shell (bash, zsh, fish) and wires the completion hook into your shell config automatically — just restart your shell afterwards. Completion is dynamic and per-directory: `scotty run <TAB>` completes the tasks and macros from the Scotty file in the current directory, and edits are reflected immediately.
+
+If you ever need to set it up manually (for example after removing the hook):
+
+```bash
+scotty completion install        # detect shell and install the hook
+scotty completion bash|zsh|fish  # or print the raw script to wire up yourself
+```
+
 ## Support us
 
 [<img src="https://github-ads.s3.eu-central-1.amazonaws.com/scotty.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/scotty)
