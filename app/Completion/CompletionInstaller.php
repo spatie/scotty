@@ -3,18 +3,10 @@
 namespace App\Completion;
 
 use Phar;
-use ReflectionClass;
-use Symfony\Component\Console\Command\CompleteCommand;
 
 class CompletionInstaller
 {
-    public const INSTALLED = 'installed';
-
-    public const ALREADY = 'already';
-
-    public const FAILED = 'failed';
-
-    protected const MARKER = '# scotty shell completion';
+    protected string $marker = '# scotty shell completion';
 
     /** @var array<string> */
     protected array $supportedShells = ['bash', 'zsh', 'fish'];
@@ -37,51 +29,34 @@ class CompletionInstaller
         return $this->isSupported($shell) ? $shell : null;
     }
 
-    public function completionScript(string $shell): ?string
-    {
-        $resourceDir = dirname((new ReflectionClass(CompleteCommand::class))->getFileName()).'/../Resources';
-        $file = "{$resourceDir}/completion.{$shell}";
-
-        if (! file_exists($file)) {
-            return null;
-        }
-
-        return str_replace(
-            ['{{ COMMAND_NAME }}', '{{ VERSION }}'],
-            [$this->commandName(), CompleteCommand::COMPLETION_API_VERSION],
-            (string) file_get_contents($file),
-        );
-    }
-
     /**
      * Append the completion hook to the shell's rc file. Idempotent: a second
-     * call returns ALREADY without writing again.
+     * call returns Already without writing again.
      */
-    public function install(string $shell): string
+    public function install(string $shell): InstallResult
     {
         $rcFile = $this->rcFile($shell);
-        $line = $this->sourceLine($shell);
 
-        $existing = file_exists($rcFile) ? (string) file_get_contents($rcFile) : '';
+        $existing = is_file($rcFile) ? (string) file_get_contents($rcFile) : '';
 
         // Key idempotency on the marker, not the exact line, so a moved or
         // renamed binary never appends a second block.
-        if (str_contains($existing, self::MARKER)) {
-            return self::ALREADY;
+        if (str_contains($existing, $this->marker)) {
+            return InstallResult::Already;
         }
 
         if (! $this->ensureDirectory(dirname($rcFile))) {
-            return self::FAILED;
+            return InstallResult::Failed;
         }
 
         $block = ($existing !== '' && ! str_ends_with($existing, "\n") ? "\n" : '')
-            ."\n".self::MARKER."\n{$line}\n";
+            ."\n{$this->marker}\n{$this->sourceLine($shell)}\n";
 
         if (@file_put_contents($rcFile, $block, FILE_APPEND) === false) {
-            return self::FAILED;
+            return InstallResult::Failed;
         }
 
-        return self::INSTALLED;
+        return InstallResult::Installed;
     }
 
     /**
@@ -102,7 +77,9 @@ class CompletionInstaller
             return null;
         }
 
-        if ($this->autoInstallAttempted()) {
+        $sentinel = $this->homeDirectory().'/.config/scotty/.completion-auto';
+
+        if (file_exists($sentinel)) {
             return null;
         }
 
@@ -111,29 +88,14 @@ class CompletionInstaller
         // Only record the attempt once it didn't fail, so a transient failure
         // (e.g. a read-only rc file) is retried on a later run instead of
         // silently disabling completion forever.
-        if ($result === self::FAILED) {
+        if ($result === InstallResult::Failed) {
             return null;
         }
 
-        $this->markAutoInstallAttempted();
+        $this->ensureDirectory(dirname($sentinel));
+        @touch($sentinel);
 
-        return $result === self::INSTALLED ? $this->rcFile($shell) : null;
-    }
-
-    protected function sentinelPath(): string
-    {
-        return $this->homeDirectory().'/.config/scotty/.completion-auto';
-    }
-
-    protected function autoInstallAttempted(): bool
-    {
-        return file_exists($this->sentinelPath());
-    }
-
-    protected function markAutoInstallAttempted(): void
-    {
-        $this->ensureDirectory(dirname($this->sentinelPath()));
-        @touch($this->sentinelPath());
+        return $result === InstallResult::Installed ? $this->rcFile($shell) : null;
     }
 
     public function rcFile(string $shell): string
@@ -180,11 +142,6 @@ class CompletionInstaller
         $argv = $_SERVER['argv'][0] ?? 'scotty';
 
         return realpath($argv) ?: $argv;
-    }
-
-    protected function commandName(): string
-    {
-        return basename($_SERVER['argv'][0] ?? 'scotty');
     }
 
     public function homeDirectory(): string

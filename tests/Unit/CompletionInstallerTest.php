@@ -1,26 +1,27 @@
 <?php
 
 use App\Completion\CompletionInstaller;
+use App\Completion\InstallResult;
+use Illuminate\Filesystem\Filesystem;
 
 beforeEach(function () {
     $this->originalHome = getenv('HOME');
     $this->originalShell = getenv('SHELL');
-    $this->home = sys_get_temp_dir().'/scotty-installer-'.uniqid();
-    mkdir($this->home, 0755, true);
-    putenv("HOME={$this->home}");
+    $this->home = sandboxHome();
 });
 
 afterEach(function () {
     putenv($this->originalHome === false ? 'HOME' : "HOME={$this->originalHome}");
     putenv($this->originalShell === false ? 'SHELL' : "SHELL={$this->originalShell}");
-    exec('rm -rf '.escapeshellarg($this->home));
+
+    (new Filesystem)->deleteDirectory($this->home);
 });
 
 it('installs once and reports already on the second call', function () {
     $installer = new CompletionInstaller;
 
-    expect($installer->install('bash'))->toBe(CompletionInstaller::INSTALLED)
-        ->and($installer->install('bash'))->toBe(CompletionInstaller::ALREADY);
+    expect($installer->install('bash'))->toBe(InstallResult::Installed)
+        ->and($installer->install('bash'))->toBe(InstallResult::Already);
 });
 
 it('auto-installs only once even across runs', function () {

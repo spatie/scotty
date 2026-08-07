@@ -45,3 +45,14 @@ function something(): void
 {
     // ..
 }
+
+/** Point HOME at a throwaway directory so rc-file writes never touch the real one. */
+function sandboxHome(): string
+{
+    $home = sys_get_temp_dir().'/scotty-test-'.uniqid();
+
+    mkdir($home, 0755, true);
+    putenv("HOME={$home}");
+
+    return $home;
+}
