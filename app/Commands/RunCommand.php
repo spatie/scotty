@@ -783,11 +783,10 @@ class RunCommand extends Command
      */
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
-        $this->completeArgument($input, $suggestions, 'task', function (ParseResult $config): array {
-            $targets = $config->availableTargets();
-
-            return [...$targets['tasks'], ...$targets['macros']];
-        });
+        $this->completeArgument($input, $suggestions, 'task', fn (ParseResult $config): array => [
+            ...array_keys($config->tasks),
+            ...array_keys($config->macros),
+        ]);
     }
 
     protected function showAvailableTargets(ParseResult $config): void

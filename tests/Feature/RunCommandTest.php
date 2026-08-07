@@ -2,9 +2,6 @@
 
 use App\Commands\RunCommand;
 use Illuminate\Support\Facades\Artisan;
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Completion\CompletionInput;
-use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Process\Process;
 
@@ -26,44 +23,15 @@ it('runs a task in pretend mode', function () {
 });
 
 it('completes the task argument with tasks and macros', function () {
-    $command = resolve(RunCommand::class);
-    $command->setApplication(new Application);
-    $command->mergeApplicationDefinition();
+    $values = completionValues(RunCommand::class, ['scotty', 'run', '--path', $this->fixturePath.'/complete.sh']);
 
-    $originalCwd = getcwd();
-    chdir($this->fixturePath);
-
-    try {
-        copy('complete.sh', 'Scotty.sh');
-
-        $input = CompletionInput::fromTokens(['scotty', 'run'], 2);
-        $input->bind($command->getDefinition());
-
-        $suggestions = new CompletionSuggestions;
-        $command->complete($input, $suggestions);
-
-        $values = array_map(
-            fn ($suggestion) => (string) $suggestion,
-            $suggestions->getValueSuggestions(),
-        );
-
-        expect($values)->toContain('pull', 'migrate', 'clearCache', 'deploy', 'fullDeploy');
-    } finally {
-        @unlink($this->fixturePath.'/Scotty.sh');
-        chdir($originalCwd);
-    }
+    expect($values)->toContain('pull', 'migrate', 'clearCache', 'deploy', 'fullDeploy');
 });
 
 it('does not complete options or other arguments as tasks', function () {
-    $command = resolve(RunCommand::class);
+    $values = completionValues(RunCommand::class, ['scotty', 'run', '--summ'], currentIndex: 2);
 
-    $input = CompletionInput::fromTokens(['scotty', 'run', '--summ'], 2);
-    $input->bind($command->getDefinition());
-
-    $suggestions = new CompletionSuggestions;
-    $command->complete($input, $suggestions);
-
-    expect($suggestions->getValueSuggestions())->toBeEmpty();
+    expect($values)->toBeEmpty();
 });
 
 it('shows error for unknown task', function () {

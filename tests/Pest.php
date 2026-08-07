@@ -1,5 +1,9 @@
 <?php
 
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Tests\TestCase;
 
 /*
@@ -44,6 +48,31 @@ expect()->extend('toBeOne', function () {
 function something(): void
 {
     // ..
+}
+
+/**
+ * Run a command's shell completion the way Symfony's `_complete` does and
+ * return the suggested values.
+ *
+ * The default current index is one past the last token, which is what a shell
+ * sends when the cursor sits on a fresh, empty word.
+ *
+ * @param  class-string<Command>  $commandClass
+ * @param  array<string>  $tokens
+ * @return array<string>
+ */
+function completionValues(string $commandClass, array $tokens, ?int $currentIndex = null): array
+{
+    $command = resolve($commandClass);
+    $command->setApplication(new Application);
+    $command->mergeApplicationDefinition();
+
+    $input = CompletionInput::fromTokens($tokens, $currentIndex ?? count($tokens));
+    $input->bind($command->getDefinition());
+
+    $command->complete($input, $suggestions = new CompletionSuggestions);
+
+    return array_map(strval(...), $suggestions->getValueSuggestions());
 }
 
 /** Point HOME at a throwaway directory so rc-file writes never touch the real one. */

@@ -8,6 +8,7 @@ use App\Parsing\ParseResult;
 use App\Parsing\ParserInterface;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Completion\CompletionSuggestions;
+use Symfony\Component\Console\Input\InputInterface;
 use Throwable;
 
 use function Laravel\Prompts\error;
@@ -26,26 +27,24 @@ trait ResolvesScottyFile
         'envoy.blade.php',
     ];
 
-    protected function resolveFilePath(): ?string
+    /**
+     * Resolve the Scotty file from `--path`, `--conf`, or the working directory.
+     *
+     * During shell completion the command never runs, so `$this->input` is unset.
+     * The CompletionInput is passed in instead — it is an InputInterface too.
+     */
+    protected function resolveFilePath(?InputInterface $input = null): ?string
     {
-        $path = $this->option('path');
+        $input ??= $this->input;
 
-        if ($path) {
-            return file_exists($path) ? $path : null;
+        foreach (['path', 'conf'] as $option) {
+            $value = $input->getOption($option);
+
+            if (is_string($value) && $value !== '') {
+                return file_exists($value) ? $value : null;
+            }
         }
 
-        $filename = $this->option('conf');
-
-        if ($filename !== null) {
-            return file_exists($filename) ? $filename : null;
-        }
-
-        return $this->firstExistingScottyFile();
-    }
-
-    /** Return the first Scotty file present in the working directory, if any. */
-    protected function firstExistingScottyFile(): ?string
-    {
         foreach (self::SCOTTY_FILENAMES as $candidate) {
             if (file_exists($candidate)) {
                 return $candidate;
@@ -88,63 +87,21 @@ trait ResolvesScottyFile
         string $argument,
         callable $values,
     ): void {
-        if ($input->getCompletionType() !== CompletionInput::TYPE_ARGUMENT_VALUE) {
+        if (! $input->mustSuggestArgumentValuesFor($argument)) {
             return;
         }
 
-        if ($input->getCompletionName() !== $argument) {
-            return;
-        }
-
-        $config = $this->parseForCompletion($input);
-
-        if ($config === null) {
-            return;
-        }
-
-        foreach ($values($config) as $value) {
-            $suggestions->suggestValue($value);
-        }
-    }
-
-    /**
-     * Parse the Scotty file for completion, returning null on any failure so
-     * completion stays silent rather than surfacing errors into the shell.
-     */
-    protected function parseForCompletion(CompletionInput $input): ?ParseResult
-    {
         try {
-            $filePath = $this->resolveFilePathFromCompletion($input);
+            $filePath = $this->resolveFilePath($input);
 
             if ($filePath === null) {
-                return null;
+                return;
             }
 
-            return $this->resolveParser($filePath)->parse($filePath);
+            $suggestions->suggestValues($values($this->resolveParser($filePath)->parse($filePath)));
         } catch (Throwable) {
-            return null;
+            // Stay silent: surfacing an error here would break tab completion.
         }
-    }
-
-    /**
-     * Resolve the Scotty file during shell completion, where command options
-     * are read from the CompletionInput rather than the bound input.
-     */
-    protected function resolveFilePathFromCompletion(CompletionInput $input): ?string
-    {
-        $path = $input->getOption('path');
-
-        if (is_string($path) && $path !== '') {
-            return file_exists($path) ? $path : null;
-        }
-
-        $conf = $input->getOption('conf');
-
-        if (is_string($conf) && $conf !== '') {
-            return file_exists($conf) ? $conf : null;
-        }
-
-        return $this->firstExistingScottyFile();
     }
 
     protected function resolveParser(string $filePath): ParserInterface

@@ -7,6 +7,7 @@ use App\Services\ScottyDescriber;
 use Illuminate\Support\ServiceProvider;
 use NunoMaduro\LaravelConsoleSummary\Contracts\DescriberContract;
 use Phar;
+use Symfony\Component\Console\Input\ArgvInput;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,32 +35,18 @@ class AppServiceProvider extends ServiceProvider
 
         // Never run while the shell is asking us for completions, or when the
         // user is managing completion themselves.
-        if (in_array($this->invokedCommandName(), ['_complete', 'completion'], true)) {
+        $command = (new ArgvInput)->getFirstArgument() ?? '';
+
+        if ($command === '_complete' || str_starts_with($command, 'completion')) {
             return;
         }
 
-        $rcFile = $this->app->make(CompletionInstaller::class)->autoInstall();
+        $rcFile = (new CompletionInstaller)->autoInstall();
 
         if ($rcFile === null) {
             return;
         }
 
-        $check = stream_isatty(STDERR) ? "\033[32m✓\033[0m " : '';
-        fwrite(STDERR, "{$check}Shell completion enabled. Restart your shell to use it (scotty run <TAB>).\n");
-    }
-
-    /**
-     * The command name as invoked, skipping any leading global options
-     * (e.g. `scotty --no-interaction _complete` still resolves to `_complete`).
-     */
-    protected function invokedCommandName(): string
-    {
-        foreach (array_slice($_SERVER['argv'] ?? [], 1) as $argument) {
-            if (! str_starts_with($argument, '-')) {
-                return $argument;
-            }
-        }
-
-        return '';
+        fwrite(STDERR, "Shell completion enabled. Restart your shell to use it (scotty run <TAB>).\n");
     }
 }
