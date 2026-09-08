@@ -11,5 +11,5 @@ class ReleaseSigningKey
      * secret key in the `SCOTTY_RELEASE_SIGNING_KEY` repository secret, and paste the printed
      * public key here.
      */
-    public const PUBLIC_KEY = '';
+    public const PUBLIC_KEY = 'znfegvaUBGmI3XrzY9HpeSZLkqSy0ipITlxkqfu0NJs=';
 }
