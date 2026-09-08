@@ -67,9 +67,18 @@ class UpdateChecker
 
         $version = str_starts_with($tagName, 'v') ? substr($tagName, 1) : $tagName;
 
+        if (! $this->isValidVersion($version)) {
+            return null;
+        }
+
         $this->writeCache($version);
 
         return $version;
+    }
+
+    protected function isValidVersion(string $version): bool
+    {
+        return preg_match('/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.\-]+)?$/', $version) === 1;
     }
 
     protected function defaultHttpFetcher(string $url): ?string
@@ -102,7 +111,7 @@ class UpdateChecker
 
         $contents = trim((string) @file_get_contents($cacheFile));
 
-        return $contents !== '' ? $contents : null;
+        return $this->isValidVersion($contents) ? $contents : null;
     }
 
     protected function writeCache(string $version): void

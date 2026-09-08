@@ -63,6 +63,12 @@ To skip the post-run update check, pass `--no-update-check` to `scotty run` or s
 
 Composer global installs upgrade with `composer global update spatie/scotty`.
 
+### Signed releases
+
+Every release is signed in Spatie's build workflow with an ed25519 key, and the detached signature is published next to the phar as `scotty.sig`. Before replacing itself, Scotty downloads that signature and checks it against the public key that is baked into the phar you're already running. The signature covers both the phar and the version it was published as.
+
+Scotty refuses to install anything it cannot verify. If the signature is missing, does not match, or your PHP install has no `sodium` extension, the update stops and the current binary is left untouched. In that case, download the phar and its signature manually from [the releases page](https://github.com/spatie/scotty/releases).
+
 ## Creating your first Scotty file
 
 The quickest way to get started is to run `scotty init` in your project root:
