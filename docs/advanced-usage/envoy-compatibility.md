@@ -168,11 +168,13 @@ scotty run deploy
 
 ## Hooks
 
-Hooks run at different points during execution. All hook code is interpreted as PHP and executed locally.
+Hooks run at different points during execution. All hook code is interpreted as PHP and executed locally, in the Scotty process. Variables from `@setup` and `@option` are available inside hooks.
+
+If a hook throws, Scotty prints a warning with the exception message and carries on. A failing hook does not fail the run. Hooks are not executed when using `--pretend`.
 
 ### @before
 
-Runs before each task:
+Runs before each task. The task name is available as `$task`:
 
 ```blade
 @before
@@ -184,7 +186,7 @@ Runs before each task:
 
 ### @after
 
-Runs after each task:
+Runs after each task that succeeded:
 
 ```blade
 @after
@@ -218,7 +220,7 @@ Runs if all tasks executed without errors:
 
 ### @finished
 
-Runs after all tasks, regardless of the outcome:
+Runs after all tasks, regardless of the outcome. `$exitCode` holds the exit code of the last failed task, or `0` when everything succeeded:
 
 ```blade
 @finished
