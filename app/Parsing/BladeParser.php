@@ -4,8 +4,6 @@ namespace App\Parsing;
 
 use App\Parsing\Blade\Compiler;
 use App\Parsing\Blade\TaskContainer;
-use Closure;
-use ReflectionFunction;
 
 class BladeParser implements ParserInterface
 {
@@ -114,29 +112,11 @@ class BladeParser implements ParserInterface
             foreach ($callbacks as $callback) {
                 $hooks[] = new HookDefinition(
                     type: $type,
-                    script: $this->extractCallbackBody($callback),
+                    callback: $callback,
                 );
             }
         }
 
         return $hooks;
-    }
-
-    protected function extractCallbackBody(Closure $callback): string
-    {
-        $reflection = new ReflectionFunction($callback);
-
-        $file = $reflection->getFileName();
-        $startLine = $reflection->getStartLine();
-        $endLine = $reflection->getEndLine();
-
-        if ($file === false || $startLine === false) {
-            return '';
-        }
-
-        $lines = file($file);
-        $body = array_slice($lines, $startLine - 1, $endLine - $startLine + 1);
-
-        return trim(implode('', $body));
     }
 }

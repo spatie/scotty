@@ -111,3 +111,29 @@ it('ignores stale cache entries', function () {
 
     expect($checker->findNewerVersion())->toBe('1.5.0');
 });
+
+it('ignores a tag that does not look like a version number', function () {
+    $checker = new UpdateChecker(
+        currentVersion: '1.3.0',
+        cacheDirectory: $this->cacheDirectory,
+        httpFetcher: fn (): string => json_encode(['tag_name' => '../../../../evil/scotty']),
+    );
+
+    expect($checker->findNewerVersion())->toBeNull();
+});
+
+it('ignores a cached version that does not look like a version number', function () {
+    if (! is_dir($this->cacheDirectory)) {
+        mkdir($this->cacheDirectory, 0755, true);
+    }
+
+    file_put_contents($this->cacheDirectory.'/update-check', '../../../../evil/scotty');
+
+    $checker = new UpdateChecker(
+        currentVersion: '1.3.0',
+        cacheDirectory: $this->cacheDirectory,
+        httpFetcher: fn (): string => json_encode(['tag_name' => '1.5.0']),
+    );
+
+    expect($checker->findNewerVersion())->toBe('1.5.0');
+});

@@ -11,11 +11,15 @@ class SelfUpdater
     /** @var callable(string): ?string */
     protected $downloader;
 
+    protected SignatureVerifier $signatureVerifier;
+
     public function __construct(
         protected string $downloadUrlTemplate = 'https://github.com/spatie/scotty/releases/download/{version}/scotty',
         ?callable $downloader = null,
+        ?SignatureVerifier $signatureVerifier = null,
     ) {
         $this->downloader = $downloader ?? fn (string $url): ?string => $this->defaultDownloader($url);
+        $this->signatureVerifier = $signatureVerifier ?? new SignatureVerifier;
     }
 
     /**
@@ -41,6 +45,24 @@ class SelfUpdater
 
         if (strlen($contents) < self::MIN_PHAR_SIZE_BYTES) {
             return UpdateResult::failed('Downloaded phar is suspiciously small, refusing to replace.');
+        }
+
+        $signatureUrl = "{$downloadUrl}.sig";
+
+        try {
+            $signature = ($this->downloader)($signatureUrl);
+        } catch (Throwable $exception) {
+            return UpdateResult::failed("Could not download the release signature from {$signatureUrl}: {$exception->getMessage()}. Refusing to install an unverified update.");
+        }
+
+        if (! is_string($signature) || trim($signature) === '') {
+            return UpdateResult::failed("Could not download the release signature from {$signatureUrl}. Refusing to install an unverified update.");
+        }
+
+        try {
+            $this->signatureVerifier->verify($version, $contents, $signature);
+        } catch (SignatureVerificationFailed $exception) {
+            return UpdateResult::failed($exception->getMessage());
         }
 
         $tempPath = "{$pharPath}.new";
@@ -72,6 +94,10 @@ class SelfUpdater
                 'header' => "User-Agent: scotty-self-update\r\n",
                 'follow_location' => 1,
                 'max_redirects' => 5,
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
             ],
         ]);
 

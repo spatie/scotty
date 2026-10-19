@@ -5,6 +5,7 @@ namespace App\Commands;
 use App\Commands\Concerns\ResolvesScottyFile;
 use App\Execution\Executor;
 use App\Execution\TaskResult;
+use App\Parsing\HookDefinition;
 use App\Parsing\OptionDefinition;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
@@ -183,6 +184,10 @@ class RunCommand extends Command
             onTaskComplete: function (TaskDefinition $task, TaskResult $result) use ($showSummaryOnly, $pretend): void {
                 $this->clearSpinnerLine();
                 $this->writeTaskComplete($task, $result, $showSummaryOnly, $pretend);
+            },
+            onHookFailed: function (HookDefinition $hook, string $error): void {
+                $this->clearSpinnerLine();
+                $this->output->writeln("  <fg=yellow>⚠ @{$hook->type->value} hook failed:</> {$error}");
             },
         );
 

@@ -2,11 +2,13 @@
 
 namespace App\Execution;
 
+use App\Parsing\HookDefinition;
 use App\Parsing\HookType;
 use App\Parsing\ParseResult;
 use App\Parsing\TaskDefinition;
 use Closure;
 use Symfony\Component\Process\Process;
+use Throwable;
 
 class Executor
 {
@@ -29,6 +31,7 @@ class Executor
         ?Closure $onTaskOutput = null,
         ?Closure $onTaskComplete = null,
         ?Closure $onTick = null,
+        ?Closure $onHookFailed = null,
     ): array {
         $tasks = $config->resolveTasksForTarget($target);
 
@@ -55,13 +58,13 @@ class Executor
                 continue;
             }
 
-            $this->runHooks($config, HookType::Before);
+            $this->runHooks($config, HookType::Before, [$task->name], $onHookFailed);
 
             $result = $this->taskRunner->run($task, $config, $env, $onTaskOutput, $onTick);
             $results[$task->name] = $result;
 
             $hookType = $result->succeeded() ? HookType::After : HookType::Error;
-            $this->runHooks($config, $hookType);
+            $this->runHooks($config, $hookType, [$task->name], $onHookFailed);
 
             if ($onTaskComplete !== null) {
                 $onTaskComplete($task, $result);
@@ -74,13 +77,19 @@ class Executor
             }
         }
 
-        $totalExitCode = array_sum(array_map(fn (TaskResult $taskResult) => $taskResult->exitCode, $results));
-
-        if ($totalExitCode === 0) {
-            $this->runHooks($config, HookType::Success);
+        if ($pretend) {
+            return $results;
         }
 
-        $this->runHooks($config, HookType::Finished);
+        $failedExitCodes = array_filter(array_map(fn (TaskResult $taskResult) => $taskResult->exitCode, $results));
+
+        if ($failedExitCodes === []) {
+            $this->runHooks($config, HookType::Success, [], $onHookFailed);
+        }
+
+        $exitCode = $failedExitCodes === [] ? 0 : end($failedExitCodes);
+
+        $this->runHooks($config, HookType::Finished, [$exitCode], $onHookFailed);
 
         return $results;
     }
@@ -180,12 +189,48 @@ class Executor
         );
     }
 
-    protected function runHooks(ParseResult $config, HookType $type): void
+    /** @param array<int, mixed> $arguments */
+    protected function runHooks(ParseResult $config, HookType $type, array $arguments, ?Closure $onHookFailed): void
     {
         foreach ($config->getHooks($type) as $hook) {
-            $process = Process::fromShellCommandline($hook->script);
-            $process->setTimeout(null);
-            $process->run();
+            $error = $hook->isCallback()
+                ? $this->runCallbackHook($hook, $arguments)
+                : $this->runScriptHook($hook);
+
+            if ($error === null) {
+                continue;
+            }
+
+            if ($onHookFailed !== null) {
+                $onHookFailed($hook, $error);
+            }
         }
+    }
+
+    /** @param array<int, mixed> $arguments */
+    protected function runCallbackHook(HookDefinition $hook, array $arguments): ?string
+    {
+        try {
+            ($hook->callback)(...$arguments);
+        } catch (Throwable $exception) {
+            return $exception->getMessage();
+        }
+
+        return null;
+    }
+
+    protected function runScriptHook(HookDefinition $hook): ?string
+    {
+        $process = Process::fromShellCommandline($hook->script);
+        $process->setTimeout(null);
+        $process->run();
+
+        if ($process->isSuccessful()) {
+            return null;
+        }
+
+        $output = trim($process->getErrorOutput()) ?: trim($process->getOutput());
+
+        return trim("Exited with code {$process->getExitCode()}. {$output}");
     }
 }

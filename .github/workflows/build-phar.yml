@@ -16,7 +16,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: 8.4
-          extensions: mbstring, zip
+          extensions: mbstring, zip, sodium
           tools: composer:v2
           coverage: none
 
@@ -26,7 +26,15 @@ jobs:
       - name: Build phar
         run: php scotty app:build --build-version=${{ github.event.release.tag_name }} --no-interaction
 
+      - name: Sign phar
+        env:
+          SCOTTY_RELEASE_SIGNING_KEY: ${{ secrets.SCOTTY_RELEASE_SIGNING_KEY }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: php .github/scripts/sign-phar.php builds/scotty "${TAG#v}"
+
       - name: Attach phar to release
         uses: softprops/action-gh-release@v2
         with:
-          files: builds/scotty
+          files: |
+            builds/scotty
+            builds/scotty.sig
