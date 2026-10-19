@@ -206,19 +206,10 @@ class DoctorCommand extends Command
         }
     }
 
-    /**
-     * Build the ssh argv for the given host and remote command.
-     *
-     * Passed to Process as an array (not a shell command string), so each
-     * element — including the host, which comes from the untrusted @servers
-     * directive — is executed as a single literal argument. The host can
-     * never be interpreted by a local shell, however it is composed.
-     *
-     * @return array<string>
-     */
+    /** @return array<int, string> */
     protected function buildSshCommand(string $host, string $remoteCommand): array
     {
-        return ['ssh', '-o', 'ConnectTimeout=5', '-o', 'BatchMode=yes', $host, $remoteCommand];
+        return ['ssh', '-o', 'ConnectTimeout=5', '-o', 'BatchMode=yes', '--', $host, $remoteCommand];
     }
 
     protected function checkSshConnectivity(string $name, string $host): bool
