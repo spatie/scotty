@@ -206,13 +206,17 @@ class DoctorCommand extends Command
         }
     }
 
+    /** @return array<int, string> */
+    protected function buildSshCommand(string $host, string $remoteCommand): array
+    {
+        return ['ssh', '-o', 'ConnectTimeout=5', '-o', 'BatchMode=yes', '--', $host, $remoteCommand];
+    }
+
     protected function checkSshConnectivity(string $name, string $host): bool
     {
         $startTime = microtime(true);
 
-        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$host} 'echo ok'";
-
-        $process = Process::fromShellCommandline($command);
+        $process = new Process($this->buildSshCommand($host, 'echo ok'));
         $process->setTimeout(self::SSH_TIMEOUT);
 
         try {
@@ -251,9 +255,7 @@ class DoctorCommand extends Command
             'git --version 2>/dev/null',
         ]);
 
-        $command = "ssh -o ConnectTimeout=5 -o BatchMode=yes {$host} '{$toolCheckScript}'";
-
-        $process = Process::fromShellCommandline($command);
+        $process = new Process($this->buildSshCommand($host, $toolCheckScript));
         $process->setTimeout(self::REMOTE_TOOLS_TIMEOUT);
 
         try {
