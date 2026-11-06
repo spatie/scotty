@@ -13,10 +13,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        php: [8.4, 8.5]
+        php: ['8.4', '8.5', '8.6']
         stability: [prefer-stable]
 
     name: P${{ matrix.php }} - ${{ matrix.stability }} - ${{ matrix.os }}
@@ -32,6 +32,13 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
           coverage: none
 
+      - name: Verify PHP version
+        env:
+          EXPECTED_PHP: ${{ matrix.php }}
+        run: |
+          php -v
+          php -r 'exit(PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION === getenv("EXPECTED_PHP") ? 0 : 1);'
+
       - name: Setup problem matchers
         run: |
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
@@ -45,4 +52,19 @@ jobs:
         run: composer show -D
 
       - name: Execute tests
-        run: composer test
+        run: composer test -- --display-deprecations --display-phpunit-deprecations
+
+      - name: Install locked production dependencies
+        run: |
+          git restore composer.lock
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Build and test unsigned phar
+        shell: bash
+        run: |
+          php scotty app:build --build-version=ci-smoke --no-interaction
+          php builds/scotty --version
+          php builds/scotty run deploy --conf=tests/fixtures/local-only.sh | tee "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'hello from scotty' "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'finished' "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'All 2 tasks completed' "$RUNNER_TEMP/scotty-local.log"
