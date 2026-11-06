@@ -53,3 +53,18 @@ jobs:
 
       - name: Execute tests
         run: composer test -- --display-deprecations --display-phpunit-deprecations
+
+      - name: Install locked production dependencies
+        run: |
+          git restore composer.lock
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Build and test unsigned phar
+        shell: bash
+        run: |
+          php scotty app:build --build-version=ci-smoke --no-interaction
+          php builds/scotty --version
+          php builds/scotty run deploy --conf=tests/fixtures/local-only.sh | tee "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'hello from scotty' "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'finished' "$RUNNER_TEMP/scotty-local.log"
+          grep -F 'All 2 tasks completed' "$RUNNER_TEMP/scotty-local.log"
